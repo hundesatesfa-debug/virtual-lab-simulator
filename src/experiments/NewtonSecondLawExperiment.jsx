@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ControlRow from "../components/ControlRow";
 import Graph from "../components/Graph";
 import InstructionSteps from "../components/InstructionSteps";
@@ -283,7 +284,7 @@ export default function NewtonSecondLawExperiment({ setAttempts, setMistakeCount
   };
 
   if (isFullscreen) {
-    return (
+    return createPortal(
       <div className="fullscreen-overlay">
         <div className="fullscreen-canvas-area">
           <NewtonCanvas mass={mass} force={force} acceleration={acceleration} isFullscreen={true} isSimRunning={isSimRunning} />
@@ -335,7 +336,8 @@ export default function NewtonSecondLawExperiment({ setAttempts, setMistakeCount
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 

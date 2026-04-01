@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ControlRow from "../components/ControlRow";
 import InstructionSteps from "../components/InstructionSteps";
 import SpaceMissionCanvas from "./space/SpaceMissionCanvas.jsx";
@@ -462,7 +463,7 @@ export default function SpaceMissionExperiment({
 
   /* ─── FULLSCREEN FLIGHT VIEW ─── */
   if (isFullscreen) {
-    return (
+    return createPortal(
       <FlightView
         stateRef={stateRef} controlsRef={controlsRef}
         cameraMode={cameraMode} setCameraMode={setCameraMode}
@@ -486,7 +487,8 @@ export default function SpaceMissionExperiment({
         beginnerText={beginnerText}
         setMistakeCount={setMistakeCount} setLastFeedback={setLastFeedback}
         replay={replay} resetSim={resetSim}
-      />
+      />,
+      document.body
     );
   }
 

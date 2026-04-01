@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ControlRow from "../components/ControlRow";
 import Graph from "../components/Graph";
 import InstructionSteps from "../components/InstructionSteps";
@@ -272,7 +273,7 @@ export default function OhmsLawExperiment({ setAttempts, setMistakeCount, setLas
 
   if (isFullscreen) {
     const power = voltage * current;
-    return (
+    return createPortal(
       <div className="fullscreen-overlay">
         <div className="fullscreen-canvas-area">
           <CircuitCanvas voltage={voltage} resistance={resistance} current={current} isFullscreen={true} />
@@ -319,7 +320,8 @@ export default function OhmsLawExperiment({ setAttempts, setMistakeCount, setLas
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 

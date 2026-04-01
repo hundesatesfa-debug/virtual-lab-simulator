@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ControlRow from "../components/ControlRow";
 import Graph from "../components/Graph";
 import InstructionSteps from "../components/InstructionSteps";
@@ -267,7 +268,7 @@ export default function PendulumExperiment({ setAttempts, setMistakeCount, setLa
   };
 
   if (isFullscreen) {
-    return (
+    return createPortal(
       <div className="fullscreen-overlay">
         <div className="fullscreen-canvas-area">
           <PendulumCanvas length={length} gravity={gravity} period={period} isFullscreen={true} isSwinging={isSwinging} />
@@ -314,7 +315,8 @@ export default function PendulumExperiment({ setAttempts, setMistakeCount, setLa
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ControlRow from "../components/ControlRow";
 import InstructionSteps from "../components/InstructionSteps";
 
@@ -374,7 +375,7 @@ export default function OpticsExperiment({ setAttempts, setMistakeCount, setLast
   };
 
   if (isFullscreen) {
-    return (
+    return createPortal(
       <div className="fullscreen-overlay">
         <div className="fullscreen-canvas-area">
           <OpticsCanvas
@@ -459,7 +460,8 @@ export default function OpticsExperiment({ setAttempts, setMistakeCount, setLast
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 

@@ -86,7 +86,7 @@ function FlightView({
           </div>
 
           {/* Left: flight controls */}
-          <div className="hud-left" style={{ maxWidth: 240, gap: "0.4rem" }}>
+          <div className="hud-left">
             <div className="hud-mini-control">
               <label>Thrust</label>
               <button
@@ -142,7 +142,7 @@ function FlightView({
           </div>
 
           {/* Right: coaching */}
-          <div className="hud-right" style={{ maxWidth: 240, gap: "0.4rem" }}>
+          <div className="hud-right">
             <div className="hud-mini-control">
               <label>Coaching</label>
               <p style={{ fontSize: "0.72rem", margin: "0.25rem 0 0", color: "var(--text)", lineHeight: 1.3 }}>{hint}</p>

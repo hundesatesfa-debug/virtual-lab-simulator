@@ -119,20 +119,26 @@ body {
 .layout {
   margin-top: 0.75rem;
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
-  gap: 0.75rem;
+  grid-template-columns: 240px 1fr 300px;
+  gap: 1rem;
   flex: 1;
   min-height: 0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Dashboard Nav ── */
+.dashboard-wrapper {
+  height: 100%;
+}
+
 .dashboard {
-  padding: 0.75rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   overflow-y: auto;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 140px);
+  height: 100%;
 }
 
 .dashboard h2 {
@@ -951,259 +957,186 @@ body {
    RESPONSIVE BREAKPOINTS
    ═══════════════════════════════ */
 
-/* Tablet & small desktop */
-@media (max-width: 1200px) {
+/* ── Mobile Navigation ── */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 2.5rem);
+  max-width: 450px;
+  height: 70px;
+  z-index: 2000;
+  display: none; /* Only show on mobile */
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 19, 33, 0.85);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(var(--neon-rgb), 0.1);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+.nav-item .icon {
+  font-size: 1.4rem;
+  transition: transform 0.3s ease;
+}
+
+.nav-item .label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-item.active {
+  color: var(--neon);
+}
+
+.nav-item.active .icon {
+  transform: translateY(-4px) scale(1.1);
+  text-shadow: 0 0 15px var(--neon);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  width: 4px;
+  height: 4px;
+  background: var(--neon);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--neon);
+}
+
+/* ═══════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════ */
+
+@media (max-width: 1100px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 220px 1fr;
   }
-
-  .dashboard {
-    flex-direction: row;
-    flex-wrap: wrap;
-    max-height: none;
-    overflow: visible;
-  }
-
-  .dashboard h2 {
-    width: 100%;
-  }
-
-  .experiment-btn {
-    flex: 1;
-    min-width: 140px;
-  }
-
   .sidebar {
-    flex-direction: row;
-    max-height: none;
-    overflow: visible;
-  }
-
-  .sidebar > * {
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .space-dashboard {
-    grid-template-columns: 1fr 1fr;
+    display: none; /* Hide sidebar on small desktops, or move it */
   }
 }
 
-/* Tablet portrait */
 @media (max-width: 900px) {
-  html { font-size: 15px; }
-  
+  body {
+    padding-bottom: 90px; /* Space for mobile nav */
+  }
+
+  .app-shell {
+    padding: 1rem 1rem 100px;
+  }
+
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    padding: 1rem 0;
   }
 
-  .topbar-actions { margin-left: 0; }
-
-  .space-dashboard {
-    grid-template-columns: 1fr;
+  .topbar-actions {
+    display: none; /* Move to specific tabs or hide */
   }
 
-  .control-row {
-    grid-template-columns: 100px 1fr 60px;
+  .meta {
+    display: none;
   }
 
-  /* Immersive Fullscreen Mobile View */
-  .fullscreen-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-    overflow: hidden !important;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-  }
-
-  .fullscreen-canvas-area {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-
-  .fullscreen-canvas-area canvas {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 1;
-    background: transparent;
-  }
-
-  .fullscreen-hud {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+  .layout {
+    display: block;
     margin-top: 0;
-    background: transparent;
-    min-height: auto;
   }
 
-  .fullscreen-hud > * {
-    pointer-events: auto;
+  .dashboard-wrapper, .workbench, .sidebar {
+    display: none;
+    animation: slideIn 0.4s ease-out;
   }
 
-  .hud-top, .hud-bottom, .hud-left, .hud-right {
-    position: absolute;
-    transform: none;
-    max-width: none;
-    background: transparent;
-    border: none;
-    margin: 0;
-  }
-
-  .hud-top {
-    top: 0; left: 0; right: 0;
-    padding: 1rem;
+  .dashboard-wrapper.active, .workbench.active, .sidebar.active {
     display: flex;
-    justify-content: flex-end; /* push exit button to right */
-    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
   }
-  
-  .hud-top h2 { display: none; }
 
-  .hud-bottom {
-    bottom: 0; left: 0; right: 0;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  .mobile-nav {
     display: flex;
-    flex-direction: column;
   }
-
-  .hud-left {
-    top: auto;
-    bottom: 5.5rem;
-    left: 0;
-    right: 0;
-    padding: 0 1rem;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .hud-right { display: none !important; }
-
-  .hud-mini-control {
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(4px);
-    flex: 1 1 auto;
-    white-space: nowrap;
-    text-align: center;
-  }
-
-  /* Specific Space Mission hide logic to prioritize visualization */
-  .workbench--space .hud-left .hud-mini-control:nth-child(n+4) {
-    display: none !important;
-  }
-  
-  .workbench--space .hud-stat:nth-child(2),
-  .workbench--space .hud-stat:nth-child(n+5) {
-    display: none !important;
-  }
-
-  .hud-stats {
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: center;
-    gap: 1.5rem;
-    margin: 0;
-    overflow-x: auto;
-  }
-  
-  .hud-stats::-webkit-scrollbar { display: none; }
-
-  .hud-stat-value {
-    font-size: 1.35rem;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-  }
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-  html { font-size: 14px; }
-
-  .app-shell { padding: 0.4rem; }
-
-  .topbar h1 { font-size: 0.9rem; }
-
-  .layout { gap: 0.5rem; }
 
   .dashboard {
-    gap: 0.35rem;
+    max-height: none;
+    padding: 0;
   }
 
   .experiment-btn {
-    min-width: 120px;
-    padding: 0.5rem;
-    font-size: 0.78rem;
+    padding: 1rem;
+    font-size: 1rem;
   }
 
-  .experiment-card { padding: 0.65rem; }
-
-  .hud-top {
-    padding: 0.65rem 1rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+  .experiment-card {
+    border: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    backdrop-filter: none;
   }
 
-  .hud-top h2 { font-size: 0.85rem; }
+  .utility-row {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+  }
 
-  .hud-bottom { padding: 1rem; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
 
-  .hud-stat-value { font-size: 1rem; }
-
-  .hud-stats { gap: 0.75rem; }
-
+/* ── Specific Overrides for Mobile Experience ── */
+@media (max-width: 600px) {
   .control-row {
     grid-template-columns: 1fr;
-    gap: 0.2rem;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem;
+    border-radius: 12px;
   }
 
-  .control-row span { font-size: 0.75rem; }
-
-  .sidebar > * {
-    min-width: 100%;
+  .control-row input[type="range"] {
+    height: 8px; /* Easier to touch */
   }
 
-  .space-canvas-wrap {
-    min-height: 250px;
-  }
-
-  .space-canvas-hero {
-    min-height: 300px;
+  .control-row input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
   }
 
   .btn {
-    padding: 0.45rem 0.65rem;
-    font-size: 0.78rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
   }
 
-  .btn-fullscreen {
-    top: 0.5rem;
-    right: 0.5rem;
-    padding: 0.4rem 0.7rem;
-    font-size: 0.75rem;
+  .run-experiment-btn {
+    padding: 1rem;
+    font-size: 1rem;
   }
-}
-
-/* Very small screens */
-@media (max-width: 380px) {
-  .topbar h1 { font-size: 0.8rem; }
-  .meta { font-size: 0.7rem; }
-  .experiment-btn { min-width: 100%; }
 }

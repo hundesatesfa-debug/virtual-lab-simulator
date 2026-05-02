@@ -47,6 +47,7 @@ function LabApp() {
   const [mistakeCount, setMistakeCount] = useState(0);
   const [lastFeedback, setLastFeedback] = useState("");
   const [slowMotion, setSlowMotion] = useState(false);
+  const [activeTab, setActiveTab] = useState("lab"); // lab, experiments, insights
 
   const selectedExperiment = experiments.find((exp) => exp.id === selected) ?? experiments[0];
   const hint = useMemo(
@@ -61,6 +62,7 @@ function LabApp() {
     setMistakeCount(0);
     setStartTime(Date.now());
     setLastFeedback("");
+    setActiveTab("lab"); // Switch back to lab on experiment select
   };
 
   return (
@@ -79,13 +81,16 @@ function LabApp() {
           {slowMotion ? "▶ Normal" : "◐ Slow-Mo"}
         </button>
       </div>
-      <main className="layout">
-        <Dashboard
-          selected={selected}
-          onSelect={onSwitchExperiment}
-          assessmentMode={assessmentMode}
-        />
-        <section className={`workbench ${selectedExperiment.id === "spaceMission" ? "workbench--space" : ""}`}>
+      <main className={`layout tab-${activeTab}`}>
+        <div className={`dashboard-wrapper ${activeTab === 'experiments' ? 'active' : ''}`}>
+          <Dashboard
+            selected={selected}
+            onSelect={onSwitchExperiment}
+            assessmentMode={assessmentMode}
+          />
+        </div>
+        
+        <section className={`workbench ${selectedExperiment.id === "spaceMission" ? "workbench--space" : ""} ${activeTab === 'lab' ? 'active' : ''}`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedExperiment.id}
@@ -109,7 +114,8 @@ function LabApp() {
           </AnimatePresence>
           <VoiceControls text={`${selectedExperiment.title}. ${hint}`} />
         </section>
-        <aside className="sidebar">
+
+        <aside className={`sidebar ${activeTab === 'insights' ? 'active' : ''}`}>
           <TutorPanel
             hint={hint}
             feedback={lastFeedback}
@@ -128,6 +134,30 @@ function LabApp() {
           />
         </aside>
       </main>
+
+      <nav className="mobile-nav glass">
+        <button 
+          className={`nav-item ${activeTab === 'experiments' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('experiments')}
+        >
+          <span className="icon">🧪</span>
+          <span className="label">Labs</span>
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'lab' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('lab')}
+        >
+          <span className="icon">🔭</span>
+          <span className="label">Workbench</span>
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'insights' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('insights')}
+        >
+          <span className="icon">📊</span>
+          <span className="label">Stats</span>
+        </button>
+      </nav>
     </div>
   );
 }

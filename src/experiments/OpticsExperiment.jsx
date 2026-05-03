@@ -352,6 +352,7 @@ export default function OpticsExperiment({ setAttempts, setMistakeCount, setLast
   const [showDispersion, setShowDispersion] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showHud, setShowHud] = useState(true);
 
   const incidentRad = (incident * Math.PI) / 180;
   const sinR = (n1 / n2) * Math.sin(incidentRad);
@@ -371,12 +372,13 @@ export default function OpticsExperiment({ setAttempts, setMistakeCount, setLast
 
   const launchFullscreen = () => {
     setIsFullscreen(true);
+    setShowHud(true);
     trace();
   };
 
   if (isFullscreen) {
     return createPortal(
-      <div className="fullscreen-overlay">
+      <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
         <div className="fullscreen-canvas-area">
           <OpticsCanvas
             incident={incident}
@@ -391,73 +393,82 @@ export default function OpticsExperiment({ setAttempts, setMistakeCount, setLast
           <div className="fullscreen-hud">
             <div className="hud-top">
               <h2>Optics Lab — Refraction & Reflection</h2>
-              <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
-            </div>
-
-            <div className="hud-left">
-              <div className="hud-mini-control">
-                <label>Incident Angle: {incident}°</label>
-                <input type="range" min={1} max={89} value={incident} onChange={(e) => setIncident(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Medium 1 (n₁): {n1.toFixed(1)}</label>
-                <input type="range" min={1} max={2} step={0.1} value={n1} onChange={(e) => setN1(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Medium 2 (n₂): {n2.toFixed(1)}</label>
-                <input type="range" min={1} max={2.5} step={0.1} value={n2} onChange={(e) => setN2(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Intensity: {(intensity * 100).toFixed(0)}%</label>
-                <input type="range" min={10} max={100} value={Math.round(intensity * 100)} onChange={(e) => setIntensity(e.target.value / 100)} />
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                  {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
+                </button>
+                <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
               </div>
             </div>
 
-            <div className="hud-right">
-              <div className="hud-mini-control">
-                <label>Light Color</label>
-                <input type="color" value={lightColor} onChange={(e) => setLightColor(e.target.value)} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Wavelength: {wavelength}nm</label>
-                <input type="range" min={380} max={780} value={wavelength} onChange={(e) => setWavelength(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label style={{ cursor: "pointer" }}>
-                  <input type="checkbox" checked={showDispersion} onChange={(e) => setShowDispersion(e.target.checked)} style={{ accentColor: "var(--neon)" }} />
-                  {" "}Dispersion
-                </label>
-              </div>
-            </div>
+            {showHud && (
+              <>
+                <div className="hud-left">
+                  <div className="hud-mini-control">
+                    <label>Incident Angle: {incident}°</label>
+                    <input type="range" min={1} max={89} value={incident} onChange={(e) => setIncident(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Medium 1 (n₁): {n1.toFixed(1)}</label>
+                    <input type="range" min={1} max={2} step={0.1} value={n1} onChange={(e) => setN1(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Medium 2 (n₂): {n2.toFixed(1)}</label>
+                    <input type="range" min={1} max={2.5} step={0.1} value={n2} onChange={(e) => setN2(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Intensity: {(intensity * 100).toFixed(0)}%</label>
+                    <input type="range" min={10} max={100} value={Math.round(intensity * 100)} onChange={(e) => setIntensity(e.target.value / 100)} />
+                  </div>
+                </div>
 
-            <div className="hud-bottom">
-              <div className="hud-stats">
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Incident</div>
-                  <div className="hud-stat-value">{incident}<span className="hud-stat-unit">°</span></div>
+                <div className="hud-right">
+                  <div className="hud-mini-control">
+                    <label>Light Color</label>
+                    <input type="color" value={lightColor} onChange={(e) => setLightColor(e.target.value)} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Wavelength: {wavelength}nm</label>
+                    <input type="range" min={380} max={780} value={wavelength} onChange={(e) => setWavelength(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label style={{ cursor: "pointer" }}>
+                      <input type="checkbox" checked={showDispersion} onChange={(e) => setShowDispersion(e.target.checked)} style={{ accentColor: "var(--neon)" }} />
+                      {" "}Dispersion
+                    </label>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Refracted</div>
-                  <div className="hud-stat-value">{refracted !== null ? refracted.toFixed(1) : "TIR"}<span className="hud-stat-unit">{refracted !== null ? "°" : ""}</span></div>
+
+                <div className="hud-bottom">
+                  <div className="hud-stats">
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Incident</div>
+                      <div className="hud-stat-value">{incident}<span className="hud-stat-unit">°</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Refracted</div>
+                      <div className="hud-stat-value">{refracted !== null ? refracted.toFixed(1) : "TIR"}<span className="hud-stat-unit">{refracted !== null ? "°" : ""}</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Reflected</div>
+                      <div className="hud-stat-value">{reflected}<span className="hud-stat-unit">°</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Intensity</div>
+                      <div className="hud-stat-value">{(intensity * 100).toFixed(0)}<span className="hud-stat-unit">%</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Snell Ratio</div>
+                      <div className="hud-stat-value">{(n1 / n2).toFixed(3)}</div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Critical Angle</div>
+                      <div className="hud-stat-value">{n1 < n2 ? "N/A" : (Math.asin(n2 / n1) * 180 / Math.PI).toFixed(1)}<span className="hud-stat-unit">{n1 >= n2 ? "°" : ""}</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Reflected</div>
-                  <div className="hud-stat-value">{reflected}<span className="hud-stat-unit">°</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Intensity</div>
-                  <div className="hud-stat-value">{(intensity * 100).toFixed(0)}<span className="hud-stat-unit">%</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Snell Ratio</div>
-                  <div className="hud-stat-value">{(n1 / n2).toFixed(3)}</div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Critical Angle</div>
-                  <div className="hud-stat-value">{n1 < n2 ? "N/A" : (Math.asin(n2 / n1) * 180 / Math.PI).toFixed(1)}<span className="hud-stat-unit">{n1 >= n2 ? "°" : ""}</span></div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>,

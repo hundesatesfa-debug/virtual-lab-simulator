@@ -237,6 +237,7 @@ export default function PendulumExperiment({ setAttempts, setMistakeCount, setLa
   const [stepIndex, setStepIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSwinging, setIsSwinging] = useState(true);
+  const [showHud, setShowHud] = useState(true);
 
   const period = 2 * Math.PI * Math.sqrt(length / gravity);
 
@@ -263,56 +264,66 @@ export default function PendulumExperiment({ setAttempts, setMistakeCount, setLa
 
   const launchFullscreen = () => {
     setIsFullscreen(true);
+    setShowHud(true);
     setIsSwinging(true);
     measure();
   };
 
   if (isFullscreen) {
     return createPortal(
-      <div className="fullscreen-overlay">
+      <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
         <div className="fullscreen-canvas-area">
           <PendulumCanvas length={length} gravity={gravity} period={period} isFullscreen={true} isSwinging={isSwinging} />
           <div className="fullscreen-hud">
             <div className="hud-top">
               <h2>Simple Pendulum Lab</h2>
-              <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
-            </div>
-
-            <div className="hud-left">
-              <div className="hud-mini-control">
-                <label>Length: {length}m</label>
-                <input type="range" min={20} max={300} value={Math.round(length * 100)} onChange={(e) => setLength(e.target.value / 100)} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Gravity: {gravity} m/s²</label>
-                <input type="range" min={16} max={150} value={Math.round(gravity * 10)} onChange={(e) => setGravity(e.target.value / 10)} />
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                  {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
+                </button>
+                <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
               </div>
             </div>
 
-            <div className="hud-bottom">
-              <div className="hud-stats">
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Length</div>
-                  <div className="hud-stat-value">{length}<span className="hud-stat-unit">m</span></div>
+            {showHud && (
+              <>
+                <div className="hud-left">
+                  <div className="hud-mini-control">
+                    <label>Length: {length}m</label>
+                    <input type="range" min={20} max={300} value={Math.round(length * 100)} onChange={(e) => setLength(e.target.value / 100)} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Gravity: {gravity} m/s²</label>
+                    <input type="range" min={16} max={150} value={Math.round(gravity * 10)} onChange={(e) => setGravity(e.target.value / 10)} />
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Gravity</div>
-                  <div className="hud-stat-value">{gravity}<span className="hud-stat-unit">m/s²</span></div>
+
+                <div className="hud-bottom">
+                  <div className="hud-stats">
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Length</div>
+                      <div className="hud-stat-value">{length}<span className="hud-stat-unit">m</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Gravity</div>
+                      <div className="hud-stat-value">{gravity}<span className="hud-stat-unit">m/s²</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Period</div>
+                      <div className="hud-stat-value">{period.toFixed(2)}<span className="hud-stat-unit">s</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Frequency</div>
+                      <div className="hud-stat-value">{(1 / period).toFixed(3)}<span className="hud-stat-unit">Hz</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Max Speed</div>
+                      <div className="hud-stat-value">{(length * 2 * Math.PI / period * Math.sin(30 * Math.PI / 180)).toFixed(2)}<span className="hud-stat-unit">m/s</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Period</div>
-                  <div className="hud-stat-value">{period.toFixed(2)}<span className="hud-stat-unit">s</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Frequency</div>
-                  <div className="hud-stat-value">{(1 / period).toFixed(3)}<span className="hud-stat-unit">Hz</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Max Speed</div>
-                  <div className="hud-stat-value">{(length * 2 * Math.PI / period * Math.sin(30 * Math.PI / 180)).toFixed(2)}<span className="hud-stat-unit">m/s</span></div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>,

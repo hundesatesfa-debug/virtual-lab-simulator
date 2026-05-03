@@ -60,10 +60,11 @@ function FlightView({
   autoStab, setAutoStab, timeWarp, setTimeWarp,
   slowMotion, speed, accel, distTarget, alignment, grav,
   hint, explainBeginner, setExplainBeginner, beginnerText,
-  setMistakeCount, setLastFeedback, replay, resetSim
+  setMistakeCount, setLastFeedback, replay, resetSim,
+  showHud, setShowHud
 }) {
   return (
-    <div className="fullscreen-overlay">
+    <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
       <div className="fullscreen-canvas-area">
         <SpaceMissionCanvas
           stateRef={stateRef}
@@ -82,143 +83,152 @@ function FlightView({
           {/* Top bar */}
           <div className="hud-top">
             <h2>Space Mission — {sim?.status === "flight" ? "IN FLIGHT" : sim?.status === "success" ? "MISSION SUCCESS" : sim?.status === "failed" ? "MISSION FAILED" : "LAUNCH READY"}</h2>
-            <button className="btn btn-neon" onClick={onExit}>✕ Exit to Setup</button>
-          </div>
-
-          {/* Left: flight controls */}
-          <div className="hud-left">
-            <div className="hud-mini-control">
-              <label>Thrust</label>
-              <button
-                className={`btn ${thrustOn ? "btn-neon" : ""}`}
-                style={{ width: "100%", fontSize: "0.75rem" }}
-                onClick={() => setThrustOn(t => !t)}
-              >
-                {thrustOn ? "🔥 ON" : "OFF"}
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
               </button>
-            </div>
-            <div className="hud-mini-control">
-              <button className="btn" style={{ width: "100%", fontSize: "0.75rem" }} onClick={manualSeparate}>
-                Stage Separate
-              </button>
-            </div>
-            <div className="hud-mini-control">
-              <button
-                className={`btn ${correctionBurn ? "btn-neon" : ""}`}
-                style={{ width: "100%", fontSize: "0.75rem" }}
-                onClick={() => setCorrectionBurn(c => !c)}
-              >
-                Mid-course Burn
-              </button>
-            </div>
-            <div className="hud-mini-control">
-              <label>Yaw: {rotateRate.toFixed(1)} rad/s</label>
-              <input type="range" min={-20} max={20} value={Math.round(rotateRate * 10)} onChange={e => setRotateRate(e.target.value / 10)} />
-            </div>
-            <div className="hud-mini-control">
-              <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
-                <input type="checkbox" checked={autoStage} onChange={e => setAutoStage(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Auto staging
-              </label>
-              <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
-                <input type="checkbox" checked={autoStab} onChange={e => setAutoStab(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Auto-stabilize
-              </label>
-            </div>
-            <div className="hud-mini-control">
-              <label>Camera</label>
-              <div style={{ display: "flex", gap: "0.25rem" }}>
-                {[{ m: CAMERA_MODES.orbit, l: "Free" }, { m: CAMERA_MODES.follow, l: "Chase" }, { m: CAMERA_MODES.ground, l: "Pad" }].map(c => (
-                  <button key={c.m} className={`btn ${cameraMode === c.m ? "btn-neon" : ""}`} style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setCameraMode(c.m)}>{c.l}</button>
-                ))}
-              </div>
-            </div>
-            <div className="hud-mini-control">
-              <label>Time Warp</label>
-              <div style={{ display: "flex", gap: "0.25rem" }}>
-                {[1, 5, 10].map(w => (
-                  <button key={w} className={`btn ${timeWarp === w ? "btn-neon" : ""}`} style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setTimeWarp(w)}>{w}x</button>
-                ))}
-              </div>
+              <button className="btn btn-neon" onClick={onExit}>✕ Exit to Setup</button>
             </div>
           </div>
 
-          {/* Right: coaching */}
-          <div className="hud-right">
-            <div className="hud-mini-control">
-              <label>Coaching</label>
-              <p style={{ fontSize: "0.72rem", margin: "0.25rem 0 0", color: "var(--text)", lineHeight: 1.3 }}>{hint}</p>
-            </div>
-            {sim?.status === "failed" && (
-              <div className="hud-mini-control" style={{ borderColor: "rgba(255, 68, 68, 0.4)" }}>
-                <p style={{ fontSize: "0.72rem", color: "var(--warning)", margin: 0 }}>{sim.failureReason || "Review launch window and thrust profile."}</p>
+          {showHud && (
+            <>
+              {/* Left: flight controls */}
+              <div className="hud-left">
+                <div className="hud-mini-control">
+                  <label>Thrust</label>
+                  <button
+                    className={`btn ${thrustOn ? "btn-neon" : ""}`}
+                    style={{ width: "100%", fontSize: "0.75rem" }}
+                    onClick={() => setThrustOn(t => !t)}
+                  >
+                    {thrustOn ? "🔥 ON" : "OFF"}
+                  </button>
+                </div>
+                <div className="hud-mini-control">
+                  <button className="btn" style={{ width: "100%", fontSize: "0.75rem" }} onClick={manualSeparate}>
+                    Stage Separate
+                  </button>
+                </div>
+                <div className="hud-mini-control">
+                  <button
+                    className={`btn ${correctionBurn ? "btn-neon" : ""}`}
+                    style={{ width: "100%", fontSize: "0.75rem" }}
+                    onClick={() => setCorrectionBurn(c => !c)}
+                  >
+                    Mid-course Burn
+                  </button>
+                </div>
+                <div className="hud-mini-control">
+                  <label>Yaw: {rotateRate.toFixed(1)} rad/s</label>
+                  <input type="range" min={-20} max={20} value={Math.round(rotateRate * 10)} onChange={e => setRotateRate(e.target.value / 10)} />
+                </div>
+                <div className="hud-mini-control">
+                  <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
+                    <input type="checkbox" checked={autoStage} onChange={e => setAutoStage(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Auto staging
+                  </label>
+                  <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
+                    <input type="checkbox" checked={autoStab} onChange={e => setAutoStab(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Auto-stabilize
+                  </label>
+                </div>
+                <div className="hud-mini-control">
+                  <label>Camera</label>
+                  <div style={{ display: "flex", gap: "0.25rem" }}>
+                    {[{ m: CAMERA_MODES.orbit, l: "Free" }, { m: CAMERA_MODES.follow, l: "Chase" }, { m: CAMERA_MODES.ground, l: "Pad" }].map(c => (
+                      <button key={c.m} className={`btn ${cameraMode === c.m ? "btn-neon" : ""}`} style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setCameraMode(c.m)}>{c.l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="hud-mini-control">
+                  <label>Time Warp</label>
+                  <div style={{ display: "flex", gap: "0.25rem" }}>
+                    {[1, 5, 10].map(w => (
+                      <button key={w} className={`btn ${timeWarp === w ? "btn-neon" : ""}`} style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setTimeWarp(w)}>{w}x</button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            )}
-            {sim?.status === "success" && (
-              <div className="hud-mini-control" style={{ borderColor: "rgba(0, 255, 213, 0.4)" }}>
-                <p style={{ fontSize: "0.72rem", color: "var(--neon)", margin: 0 }}>🎉 Mission success — trajectory captured.</p>
-              </div>
-            )}
-            <div className="hud-mini-control">
-              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setExplainBeginner(v => !v)}>
-                  {explainBeginner ? "Hide tip" : "Beginner tip"}
-                </button>
-                <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={replay}>
-                  Replay
-                </button>
-                <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={resetSim}>
-                  Reset
-                </button>
-              </div>
-            </div>
-            {explainBeginner && (
-              <div className="hud-mini-control">
-                <p style={{ fontSize: "0.68rem", margin: 0, color: "var(--muted)", lineHeight: 1.3 }}>{beginnerText}</p>
-              </div>
-            )}
-            <div className="hud-mini-control">
-              <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
-                <input type="checkbox" checked={showSceneGrid} onChange={e => setShowSceneGrid(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Floor grid
-              </label>
-            </div>
-          </div>
 
-          {/* Bottom: telemetry HUD */}
-          <div className="hud-bottom">
-            <div className="hud-stats">
-              <div className="hud-stat">
-                <div className="hud-stat-label">Velocity</div>
-                <div className="hud-stat-value">{speed.toFixed(2)}<span className="hud-stat-unit">u/s</span></div>
+              {/* Right: coaching */}
+              <div className="hud-right">
+                <div className="hud-mini-control">
+                  <label>Coaching</label>
+                  <p style={{ fontSize: "0.72rem", margin: "0.25rem 0 0", color: "var(--text)", lineHeight: 1.3 }}>{hint}</p>
+                </div>
+                {sim?.status === "failed" && (
+                  <div className="hud-mini-control" style={{ borderColor: "rgba(255, 68, 68, 0.4)" }}>
+                    <p style={{ fontSize: "0.72rem", color: "var(--warning)", margin: 0 }}>{sim.failureReason || "Review launch window and thrust profile."}</p>
+                  </div>
+                )}
+                {sim?.status === "success" && (
+                  <div className="hud-mini-control" style={{ borderColor: "rgba(0, 255, 213, 0.4)" }}>
+                    <p style={{ fontSize: "0.72rem", color: "var(--neon)", margin: 0 }}>🎉 Mission success — trajectory captured.</p>
+                  </div>
+                )}
+                <div className="hud-mini-control">
+                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                    <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={() => setExplainBeginner(v => !v)}>
+                      {explainBeginner ? "Hide tip" : "Beginner tip"}
+                    </button>
+                    <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={replay}>
+                      Replay
+                    </button>
+                    <button className="btn" style={{ flex: 1, fontSize: "0.65rem", padding: "0.3rem" }} onClick={resetSim}>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                {explainBeginner && (
+                  <div className="hud-mini-control">
+                    <p style={{ fontSize: "0.68rem", margin: 0, color: "var(--muted)", lineHeight: 1.3 }}>{beginnerText}</p>
+                  </div>
+                )}
+                <div className="hud-mini-control">
+                  <label style={{ cursor: "pointer", fontSize: "0.7rem" }}>
+                    <input type="checkbox" checked={showSceneGrid} onChange={e => setShowSceneGrid(e.target.checked)} style={{ accentColor: "var(--neon)" }} /> Floor grid
+                  </label>
+                </div>
               </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Accel</div>
-                <div className="hud-stat-value">{accel.toFixed(2)}<span className="hud-stat-unit">u/s²</span></div>
+
+              {/* Bottom: telemetry HUD */}
+              <div className="hud-bottom">
+                <div className="hud-stats">
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Velocity</div>
+                    <div className="hud-stat-value">{speed.toFixed(2)}<span className="hud-stat-unit">u/s</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Accel</div>
+                    <div className="hud-stat-value">{accel.toFixed(2)}<span className="hud-stat-unit">u/s²</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Range</div>
+                    <div className="hud-stat-value">{distTarget.toFixed(1)}<span className="hud-stat-unit">u</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Fuel</div>
+                    <div className="hud-stat-value">{sim ? ((sim.fuel / sim.fuelMax) * 100).toFixed(0) : 0}<span className="hud-stat-unit">%</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Alignment</div>
+                    <div className="hud-stat-value">{alignment.toFixed(1)}<span className="hud-stat-unit">°</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Heat</div>
+                    <div className="hud-stat-value">{sim ? (sim.heat * 100).toFixed(0) : 0}<span className="hud-stat-unit">%</span></div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Stage</div>
+                    <div className="hud-stat-value">{sim?.stage ?? 1}</div>
+                  </div>
+                  <div className="hud-stat">
+                    <div className="hud-stat-label">Success</div>
+                    <div className="hud-stat-value">{successPct}<span className="hud-stat-unit">%</span></div>
+                  </div>
+                </div>
               </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Range</div>
-                <div className="hud-stat-value">{distTarget.toFixed(1)}<span className="hud-stat-unit">u</span></div>
-              </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Fuel</div>
-                <div className="hud-stat-value">{sim ? ((sim.fuel / sim.fuelMax) * 100).toFixed(0) : 0}<span className="hud-stat-unit">%</span></div>
-              </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Alignment</div>
-                <div className="hud-stat-value">{alignment.toFixed(1)}<span className="hud-stat-unit">°</span></div>
-              </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Heat</div>
-                <div className="hud-stat-value">{sim ? (sim.heat * 100).toFixed(0) : 0}<span className="hud-stat-unit">%</span></div>
-              </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Stage</div>
-                <div className="hud-stat-value">{sim?.stage ?? 1}</div>
-              </div>
-              <div className="hud-stat">
-                <div className="hud-stat-label">Success</div>
-                <div className="hud-stat-value">{successPct}<span className="hud-stat-unit">%</span></div>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -461,6 +471,8 @@ export default function SpaceMissionExperiment({
 
   const rv = sim?.rocketVisual ?? ROCKET_DEFAULTS.visual;
 
+  const [showHud, setShowHud] = useState(true);
+
   /* ─── FULLSCREEN FLIGHT VIEW ─── */
   if (isFullscreen) {
     return createPortal(
@@ -487,6 +499,7 @@ export default function SpaceMissionExperiment({
         beginnerText={beginnerText}
         setMistakeCount={setMistakeCount} setLastFeedback={setLastFeedback}
         replay={replay} resetSim={resetSim}
+        showHud={showHud} setShowHud={setShowHud}
       />,
       document.body
     );

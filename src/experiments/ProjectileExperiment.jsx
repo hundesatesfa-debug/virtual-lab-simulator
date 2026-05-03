@@ -274,6 +274,7 @@ export default function ProjectileExperiment({ setAttempts, setMistakeCount, set
   const [stepIndex, setStepIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLaunched, setIsLaunched] = useState(false);
+  const [showHud, setShowHud] = useState(true);
 
   const rad = (angle * Math.PI) / 180;
   const range = (speed * speed * Math.sin(2 * rad)) / gravity;
@@ -294,64 +295,74 @@ export default function ProjectileExperiment({ setAttempts, setMistakeCount, set
 
   const launchFullscreen = () => {
     setIsFullscreen(true);
+    setShowHud(true);
     setIsLaunched(true);
     launch();
   };
 
   if (isFullscreen) {
     return createPortal(
-      <div className="fullscreen-overlay">
+      <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
         <div className="fullscreen-canvas-area">
           <ProjectileCanvas angle={angle} speed={speed} gravity={gravity} isFullscreen={true} isLaunched={isLaunched} />
           <div className="fullscreen-hud">
             <div className="hud-top">
               <h2>Projectile Motion Lab</h2>
-              <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
-            </div>
-
-            <div className="hud-left">
-              <div className="hud-mini-control">
-                <label>Angle: {angle}°</label>
-                <input type="range" min={5} max={85} value={angle} onChange={(e) => setAngle(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Speed: {speed} m/s</label>
-                <input type="range" min={5} max={40} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Gravity: {gravity} m/s²</label>
-                <input type="range" min={16} max={150} value={Math.round(gravity * 10)} onChange={(e) => setGravity(e.target.value / 10)} />
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                  {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
+                </button>
+                <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
               </div>
             </div>
 
-            <div className="hud-bottom">
-              <div className="hud-stats">
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Angle</div>
-                  <div className="hud-stat-value">{angle}<span className="hud-stat-unit">°</span></div>
+            {showHud && (
+              <>
+                <div className="hud-left">
+                  <div className="hud-mini-control">
+                    <label>Angle: {angle}°</label>
+                    <input type="range" min={5} max={85} value={angle} onChange={(e) => setAngle(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Speed: {speed} m/s</label>
+                    <input type="range" min={5} max={40} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Gravity: {gravity} m/s²</label>
+                    <input type="range" min={16} max={150} value={Math.round(gravity * 10)} onChange={(e) => setGravity(e.target.value / 10)} />
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Speed</div>
-                  <div className="hud-stat-value">{speed}<span className="hud-stat-unit">m/s</span></div>
+
+                <div className="hud-bottom">
+                  <div className="hud-stats">
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Angle</div>
+                      <div className="hud-stat-value">{angle}<span className="hud-stat-unit">°</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Speed</div>
+                      <div className="hud-stat-value">{speed}<span className="hud-stat-unit">m/s</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Range</div>
+                      <div className="hud-stat-value">{range.toFixed(1)}<span className="hud-stat-unit">m</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Max Height</div>
+                      <div className="hud-stat-value">{maxHeight.toFixed(1)}<span className="hud-stat-unit">m</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Flight Time</div>
+                      <div className="hud-stat-value">{flightTime.toFixed(2)}<span className="hud-stat-unit">s</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Gravity</div>
+                      <div className="hud-stat-value">{gravity}<span className="hud-stat-unit">m/s²</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Range</div>
-                  <div className="hud-stat-value">{range.toFixed(1)}<span className="hud-stat-unit">m</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Max Height</div>
-                  <div className="hud-stat-value">{maxHeight.toFixed(1)}<span className="hud-stat-unit">m</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Flight Time</div>
-                  <div className="hud-stat-value">{flightTime.toFixed(2)}<span className="hud-stat-unit">s</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Gravity</div>
-                  <div className="hud-stat-value">{gravity}<span className="hud-stat-unit">m/s²</span></div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>,

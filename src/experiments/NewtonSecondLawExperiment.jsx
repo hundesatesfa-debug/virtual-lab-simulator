@@ -254,6 +254,7 @@ export default function NewtonSecondLawExperiment({ setAttempts, setMistakeCount
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSimRunning, setIsSimRunning] = useState(false);
 
+  const [showHud, setShowHud] = useState(true);
   const acceleration = force / mass;
 
   const points = useMemo(
@@ -279,61 +280,71 @@ export default function NewtonSecondLawExperiment({ setAttempts, setMistakeCount
 
   const launchFullscreen = () => {
     setIsFullscreen(true);
+    setShowHud(true);
     setIsSimRunning(true);
     validate();
   };
 
   if (isFullscreen) {
     return createPortal(
-      <div className="fullscreen-overlay">
+      <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
         <div className="fullscreen-canvas-area">
           <NewtonCanvas mass={mass} force={force} acceleration={acceleration} isFullscreen={true} isSimRunning={isSimRunning} />
           <div className="fullscreen-hud">
             <div className="hud-top">
               <h2>Newton's Second Law — F = ma</h2>
-              <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
-            </div>
-
-            <div className="hud-left">
-              <div className="hud-mini-control">
-                <label>Mass: {mass} kg</label>
-                <input type="range" min={1} max={20} value={mass} onChange={(e) => setMass(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Force: {force} N</label>
-                <input type="range" min={1} max={120} value={force} onChange={(e) => setForce(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <button className="btn btn-neon" onClick={() => { setIsSimRunning(false); setTimeout(() => setIsSimRunning(true), 50); }} style={{ width: "100%" }}>
-                  ↻ Reset Motion
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                  {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
                 </button>
+                <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
               </div>
             </div>
 
-            <div className="hud-bottom">
-              <div className="hud-stats">
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Mass</div>
-                  <div className="hud-stat-value">{mass}<span className="hud-stat-unit">kg</span></div>
+            {showHud && (
+              <>
+                <div className="hud-left">
+                  <div className="hud-mini-control">
+                    <label>Mass: {mass} kg</label>
+                    <input type="range" min={1} max={20} value={mass} onChange={(e) => setMass(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Force: {force} N</label>
+                    <input type="range" min={1} max={120} value={force} onChange={(e) => setForce(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <button className="btn btn-neon" onClick={() => { setIsSimRunning(false); setTimeout(() => setIsSimRunning(true), 50); }} style={{ width: "100%" }}>
+                      ↻ Reset Motion
+                    </button>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Force</div>
-                  <div className="hud-stat-value">{force}<span className="hud-stat-unit">N</span></div>
+
+                <div className="hud-bottom">
+                  <div className="hud-stats">
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Mass</div>
+                      <div className="hud-stat-value">{mass}<span className="hud-stat-unit">kg</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Force</div>
+                      <div className="hud-stat-value">{force}<span className="hud-stat-unit">N</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Acceleration</div>
+                      <div className="hud-stat-value">{acceleration.toFixed(2)}<span className="hud-stat-unit">m/s²</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Weight</div>
+                      <div className="hud-stat-value">{(mass * 9.8).toFixed(1)}<span className="hud-stat-unit">N</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Momentum Rate</div>
+                      <div className="hud-stat-value">{force.toFixed(0)}<span className="hud-stat-unit">kg·m/s²</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Acceleration</div>
-                  <div className="hud-stat-value">{acceleration.toFixed(2)}<span className="hud-stat-unit">m/s²</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Weight</div>
-                  <div className="hud-stat-value">{(mass * 9.8).toFixed(1)}<span className="hud-stat-unit">N</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Momentum Rate</div>
-                  <div className="hud-stat-value">{force.toFixed(0)}<span className="hud-stat-unit">kg·m/s²</span></div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>,

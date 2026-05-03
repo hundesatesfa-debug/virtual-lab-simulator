@@ -244,6 +244,7 @@ export default function OhmsLawExperiment({ setAttempts, setMistakeCount, setLas
   const [resistance, setResistance] = useState(6);
   const [stepIndex, setStepIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showHud, setShowHud] = useState(true);
   const current = voltage / resistance;
 
   const points = useMemo(
@@ -268,56 +269,66 @@ export default function OhmsLawExperiment({ setAttempts, setMistakeCount, setLas
 
   const launchFullscreen = () => {
     setIsFullscreen(true);
+    setShowHud(true);
     checkStep();
   };
 
   if (isFullscreen) {
     const power = voltage * current;
     return createPortal(
-      <div className="fullscreen-overlay">
+      <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
         <div className="fullscreen-canvas-area">
           <CircuitCanvas voltage={voltage} resistance={resistance} current={current} isFullscreen={true} />
           <div className="fullscreen-hud">
             <div className="hud-top">
               <h2>Ohm's Law — Electric Circuit</h2>
-              <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
-            </div>
-
-            <div className="hud-left">
-              <div className="hud-mini-control">
-                <label>Voltage: {voltage}V</label>
-                <input type="range" min={1} max={24} value={voltage} onChange={(e) => setVoltage(Number(e.target.value))} />
-              </div>
-              <div className="hud-mini-control">
-                <label>Resistance: {resistance}Ω</label>
-                <input type="range" min={1} max={20} value={resistance} onChange={(e) => setResistance(Number(e.target.value))} />
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-neon mobile-only" onClick={() => setShowHud(!showHud)}>
+                  {showHud ? "👁 Hide HUD" : "👁 Show HUD"}
+                </button>
+                <button className="btn btn-neon" onClick={() => setIsFullscreen(false)}>✕ Exit</button>
               </div>
             </div>
 
-            <div className="hud-bottom">
-              <div className="hud-stats">
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Voltage</div>
-                  <div className="hud-stat-value">{voltage}<span className="hud-stat-unit">V</span></div>
+            {showHud && (
+              <>
+                <div className="hud-left">
+                  <div className="hud-mini-control">
+                    <label>Voltage: {voltage}V</label>
+                    <input type="range" min={1} max={24} value={voltage} onChange={(e) => setVoltage(Number(e.target.value))} />
+                  </div>
+                  <div className="hud-mini-control">
+                    <label>Resistance: {resistance}Ω</label>
+                    <input type="range" min={1} max={20} value={resistance} onChange={(e) => setResistance(Number(e.target.value))} />
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Resistance</div>
-                  <div className="hud-stat-value">{resistance}<span className="hud-stat-unit">Ω</span></div>
+
+                <div className="hud-bottom">
+                  <div className="hud-stats">
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Voltage</div>
+                      <div className="hud-stat-value">{voltage}<span className="hud-stat-unit">V</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Resistance</div>
+                      <div className="hud-stat-value">{resistance}<span className="hud-stat-unit">Ω</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Current</div>
+                      <div className="hud-stat-value">{current.toFixed(2)}<span className="hud-stat-unit">A</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Power</div>
+                      <div className="hud-stat-value">{power.toFixed(1)}<span className="hud-stat-unit">W</span></div>
+                    </div>
+                    <div className="hud-stat">
+                      <div className="hud-stat-label">Electron Speed</div>
+                      <div className="hud-stat-value">{(current * 0.1).toFixed(2)}<span className="hud-stat-unit">m/s</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Current</div>
-                  <div className="hud-stat-value">{current.toFixed(2)}<span className="hud-stat-unit">A</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Power</div>
-                  <div className="hud-stat-value">{power.toFixed(1)}<span className="hud-stat-unit">W</span></div>
-                </div>
-                <div className="hud-stat">
-                  <div className="hud-stat-label">Electron Speed</div>
-                  <div className="hud-stat-value">{(current * 0.1).toFixed(2)}<span className="hud-stat-unit">m/s</span></div>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>,

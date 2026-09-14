@@ -4,6 +4,8 @@ import PendulumExperiment from "../experiments/PendulumExperiment";
 import OpticsExperiment from "../experiments/OpticsExperiment";
 import NewtonSecondLawExperiment from "../experiments/NewtonSecondLawExperiment";
 import SpaceMissionExperiment from "../experiments/SpaceMissionExperiment";
+import GenericExperiment from "../experiments/generic/GenericExperiment";
+import { genericExperiments } from "./genericExperiments";
 
 export const experiments = [
   {
@@ -41,5 +43,12 @@ export const experiments = [
     title: "Space Mission Control & Orbital Lab",
     topic: "Astrophysics",
     component: SpaceMissionExperiment
-  }
+  },
+  ...genericExperiments.map((bp) => ({
+    id: bp.id,
+    title: bp.title,
+    topic: bp.topic,
+    component: GenericExperiment,
+    blueprint: bp
+  }))
 ];

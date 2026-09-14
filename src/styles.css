@@ -726,6 +726,35 @@ body {
   border-radius: 10px;
 }
 
+.graph small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-top: 0.25rem;
+}
+
+.graph-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.graph-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.graph-legend .legend-item i {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
 /* ── Feedback ── */
 .feedback {
   margin-top: 0.5rem;
@@ -766,6 +795,307 @@ body {
 .slow-motion * {
   animation-duration: calc(var(--slow-factor, 2) * 1s) !important;
   transition-duration: 0.45s !important;
+}
+
+/* ── Generic Experiment Engine ── */
+.generic-experiment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.generic-experiment .exp-head h2 {
+  margin-bottom: 0.25rem;
+}
+
+.generic-experiment .exp-number {
+  color: var(--neon);
+}
+
+.generic-experiment .exp-desc {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.experiment-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.segmented-row,
+.select-row,
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.35rem 0;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.segmented-row > span,
+.select-row > span,
+.toggle-row > span {
+  color: var(--muted);
+}
+
+.toggle-row strong {
+  color: var(--neon);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+}
+
+.select-row select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+}
+
+.segmented {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 0.2rem;
+}
+
+.segmented button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.segmented button.active {
+  background: rgba(var(--neon-rgb), 0.16);
+  color: var(--neon);
+  box-shadow: 0 0 10px rgba(var(--neon-rgb), 0.15);
+}
+
+.toggle-row input[type="checkbox"] {
+  accent-color: var(--neon);
+  width: 16px;
+  height: 16px;
+}
+
+.measures-title {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0.5rem 0 0.4rem;
+}
+
+.measure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 0.5rem;
+}
+
+.measure-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
+  text-align: center;
+}
+
+.measure-value {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--neon);
+  text-shadow: 0 0 12px rgba(var(--neon-rgb), 0.35);
+}
+
+.measure-unit {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.measure-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.info-accordion {
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.info-accordion-head {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.info-accordion-head:hover {
+  background: rgba(var(--neon-rgb), 0.05);
+}
+
+.info-accordion .chevron {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.info-accordion-body {
+  padding: 0.4rem 0.8rem 0.75rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text);
+  border-top: 1px solid var(--glass-border);
+}
+
+.exp-objective {
+  color: var(--neon);
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.exp-theory {
+  color: var(--muted);
+  margin: 0.3rem 0;
+  font-size: 0.84rem;
+}
+
+.formula-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+
+.formula-item {
+  background: rgba(var(--neon-rgb), 0.06);
+  border: 1px solid rgba(var(--neon-rgb), 0.18);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.formula-item code {
+  font-family: "Consolas", "Courier New", monospace;
+  color: var(--neon);
+  margin-right: 0.5rem;
+}
+
+.formula-item span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.exp-units,
+.exp-limits {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
+.procedure-list {
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.procedure-list li {
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+
+.graph-wrap {
+  margin-top: 0.5rem;
+}
+
+.record-table-wrap {
+  margin-top: 0.5rem;
+}
+
+.record-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.record-table th,
+.record-table td {
+  border: 1px solid var(--glass-border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  color: var(--text);
+}
+
+.record-table th {
+  background: rgba(var(--neon-rgb), 0.06);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.record-table th small {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.record-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.phase-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  color: var(--neon);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(var(--neon-rgb), 0.4);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+}
+
+.phase-badge-static {
+  color: var(--neon);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.setup-preview--tall {
+  height: 280px !important;
 }
 
 /* ── Misc ── */

@@ -102,6 +102,7 @@ function LabApp() {
             >
               <selectedExperiment.component
                 key={`${selectedExperiment.id}-${runKey}`}
+                blueprint={selectedExperiment.blueprint}
                 assessmentMode={assessmentMode}
                 attempts={attempts}
                 setAttempts={setAttempts}

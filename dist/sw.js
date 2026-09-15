@@ -1,6 +1,6 @@
 const CACHE_NAME = "physlab-v3";
 // __OFFLINE_ASSETS__ is injected at build time with the hashed JS/CSS bundle files
-const STATIC_ASSETS = ["/assets/index-C4dt-WC9.css","/assets/index-DymAuCHy.js"];
+const STATIC_ASSETS = ["/assets/index-C4dt-WC9.css","/assets/index-D_n2hE7R.js"];
 const CORE = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

@@ -3,7 +3,31 @@ import { createPortal } from "react-dom";
 import ControlRow from "../../components/ControlRow";
 import InstructionSteps from "../../components/InstructionSteps";
 import LabGraph from "../../components/LabGraph";
-import { drawScene } from "./scenes";
+import { drawScene, getStore } from "./scenes";
+
+function dragValue(item, px, py) {
+  const c = item.control;
+  if (!c) return null;
+  let frac;
+  if (item.kind === "dial") {
+    const ang = Math.atan2(py - item.cy, px - item.cx);
+    let base = (ang - item.start) / item.span;
+    for (const cand of [(ang + Math.PI * 2 - item.start) / item.span, (ang - Math.PI * 2 - item.start) / item.span]) {
+      if (Math.abs(cand - item.frac) < Math.abs(base - item.frac)) base = cand;
+    }
+    frac = Math.max(0, Math.min(1, base));
+  } else if (item.orient === "v") {
+    frac = (item.y + item.h - py) / item.h;
+    frac = Math.max(0, Math.min(1, frac));
+  } else {
+    frac = (px - item.x) / item.w;
+    frac = Math.max(0, Math.min(1, frac));
+  }
+  let v = c.min + frac * (c.max - c.min);
+  if (c.step) v = c.min + Math.round((v - c.min) / c.step) * c.step;
+  if (c.max !== undefined) v = Math.max(c.min, Math.min(c.max, v));
+  return v;
+}
 
 function controlsFromDefaults(controls) {
   return Object.fromEntries(
@@ -63,12 +87,45 @@ function ToggleControl({ control, value, onChange }) {
   );
 }
 
-function ExperimentCanvas({ blueprint, state, live, running, speed }) {
+function ExperimentCanvas({ blueprint, state, live, running, speed, onDrag }) {
   const canvasRef = useRef(null);
   const animRef = useRef(0);
   const latest = useRef({ state, live, running });
   latest.current = { state, live, running };
   const ambientRef = useRef(0);
+  const dragRef = useRef(null);
+
+  const hitTest = useCallback((px, py) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const S = getStore(canvas);
+    const items = S.ctl || [];
+    for (const it of items) {
+      if (it.kind === "slider") {
+        if (px >= it.x && px <= it.x + it.w && py >= it.y && py <= it.y + it.h) return it;
+      } else if (it.kind === "dial") {
+        const dx = px - it.cx;
+        const dy = py - it.cy;
+        if (dx * dx + dy * dy <= it.hitR * it.hitR) return it;
+      }
+    }
+    return null;
+  }, []);
+
+  const applyDrag = useCallback(
+    (item, px, py) => {
+      const v = dragValue(item, px, py);
+      if (v !== null && onDrag) onDrag(item.key, v, item.frac);
+    },
+    [onDrag]
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas._controls = blueprint.controls || [];
+    canvas._onDrag = (key, value) => onDrag && onDrag(key, value, 0);
+  }, [blueprint, onDrag]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -105,7 +162,55 @@ function ExperimentCanvas({ blueprint, state, live, running, speed }) {
     };
   }, [blueprint]);
 
-  return <canvas ref={canvasRef} className="viz-canvas" />;
+  const toLocal = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    return { px: e.clientX - rect.left, py: e.clientY - rect.top };
+  };
+
+  const onPointerDown = (e) => {
+    const { px, py } = toLocal(e);
+    const item = hitTest(px, py);
+    if (!item) return;
+    e.preventDefault();
+    canvasRef.current.setPointerCapture && canvasRef.current.setPointerCapture(e.pointerId);
+    const c = (canvasRef.current._controls || []).find((cc) => cc.key === item.key) || null;
+    dragRef.current = { item: { ...item, control: c } };
+    canvasRef.current.style.cursor = "grabbing";
+    applyDrag(dragRef.current.item, px, py);
+  };
+
+  const onPointerMove = (e) => {
+    const canvas = canvasRef.current;
+    const { px, py } = toLocal(e);
+    if (dragRef.current) {
+      e.preventDefault();
+      applyDrag(dragRef.current.item, px, py);
+      return;
+    }
+    canvas.style.cursor = hitTest(px, py) ? "grab" : "default";
+  };
+
+  const onPointerUp = () => {
+    dragRef.current = null;
+    if (canvasRef.current) canvasRef.current.style.cursor = "default";
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="viz-canvas interact-canvas"
+      style={{ touchAction: "none" }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onPointerLeave={() => {
+        dragRef.current = null;
+        if (canvasRef.current) canvasRef.current.style.cursor = "default";
+      }}
+    />
+  );
 }
 
 function InfoAccordion({ label, children }) {
@@ -370,7 +475,14 @@ export default function GenericExperiment({
 
       <div className="setup-phase">
         <div className="setup-preview setup-preview--tall">
-          <ExperimentCanvas blueprint={blueprint} state={s} live={{ scene }} running={running} speed={speed} />
+          <ExperimentCanvas
+            blueprint={blueprint}
+            state={s}
+            live={{ scene }}
+            running={running}
+            speed={speed}
+            onDrag={setParam}
+          />
           <div className="phase-badge">{phase.toUpperCase()}</div>
         </div>
 
@@ -491,7 +603,14 @@ export default function GenericExperiment({
         createPortal(
           <div className={`fullscreen-overlay ${!showHud ? "hud-minimized" : ""}`}>
             <div className="fullscreen-canvas-area">
-              <ExperimentCanvas blueprint={blueprint} state={s} live={{ scene }} running={running} speed={speed} />
+              <ExperimentCanvas
+                blueprint={blueprint}
+                state={s}
+                live={{ scene }}
+                running={running}
+                speed={speed}
+                onDrag={setParam}
+              />
               <div className="fullscreen-hud">
                 <div className="hud-top">
                   <h2>

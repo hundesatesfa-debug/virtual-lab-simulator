@@ -96,6 +96,210 @@ function hsl(color) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// INTERACTION FRAMEWORK — drag-to-operate controls (real-lab feel)
+// Scenes register "hotspots" by calling labSlider / labDial.
+// The React canvas layer (GenericExperiment.jsx) hit-tests them and
+// writes values back into the matching blueprint control.
+// ─────────────────────────────────────────────────────────────
+function clamp01(v) {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
+function ctl(canvas, key) {
+  const arr = (canvas && canvas._controls) || [];
+  return arr.find((c) => c.key === key) || null;
+}
+
+function fracOf(canvas, key, value) {
+  const c = ctl(canvas, key);
+  if (!c || c.min === undefined || c.max === undefined) return 0;
+  return clamp01((value - c.min) / (c.max - c.min));
+}
+
+function labSlider(ctx, S, x, y, len, key, frac, label, opts = {}) {
+  const color = opts.color ?? "#00ffd5";
+  const f = clamp01(frac);
+  if (opts.orient === "v") {
+    // vertical track: top = 0, bottom = 1
+    const knY = y + (1 - f) * len;
+    if (label) {
+      st(ctx, 9);
+      ctx.fillStyle = label ? "rgba(255,255,255,0.85)" : "";
+      ctx.textAlign = "left";
+      ctx.fillText(label, x + 12, y - 4);
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x - 2, y, 4, len, 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x - 2, y + (1 - f) * len, 4, Math.max(4, f * len), 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    for (let i = 0; i <= 6; i++) {
+      ctx.fillRect(x - 6, y + (len * i) / 6 - 0.5, 12, 1);
+    }
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x, knY, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    S.ctl = S.ctl || [];
+    S.ctl.push({ kind: "slider", orient: "v", key, x: x - 14, y, w: 28, h: len, frac: f, label: label || "" });
+    return f;
+  }
+  const knX = x + f * len;
+  st(ctx, 9);
+  if (label) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.textAlign = "left";
+    ctx.fillText(label, x, y - 5);
+  }
+  // track + fill + ticks
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x, y - 2, len, 4, 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = color + "";
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.roundRect(x, y - 2, Math.max(4, knX - x), 4, 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  for (let i = 0; i <= 4; i++) {
+    ctx.fillRect(x + (len * i) / 4 - 0.5, y - 6, 1, 12);
+  }
+  // knob
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(knX, y, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  S.ctl = S.ctl || [];
+  S.ctl.push({ kind: "slider", key, x, y: y - 14, w: len, h: 28, frac: f, label: label || "" });
+  return f;
+}
+
+function labDial(ctx, S, cx, cy, r, key, frac, label, opts = {}) {
+  const color = opts.color ?? "#ff5aa9";
+  const start = opts.start ?? -Math.PI * 0.75;
+  const span = opts.span ?? Math.PI * 1.5;
+  const f = clamp01(frac);
+  // dial face
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // ticks
+  for (let i = 0; i <= 10; i++) {
+    const a = start + (i / 10) * span;
+    const in1 = i / 10 <= f;
+    ctx.strokeStyle = in1 ? color : "rgba(255,255,255,0.2)";
+    ctx.lineWidth = in1 ? 2.4 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r * 0.72, cy + Math.sin(a) * r * 0.72);
+    ctx.lineTo(cx + Math.cos(a) * r * 0.92, cy + Math.sin(a) * r * 0.92);
+    ctx.stroke();
+  }
+  // needle
+  const na = start + f * span;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(na) * r * 0.7, cy + Math.sin(na) * r * 0.7);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  if (label) {
+    st(ctx, 9);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.textAlign = "center";
+    ctx.fillText(label, cx, cy + r + 14);
+  }
+  S.ctl = S.ctl || [];
+  S.ctl.push({ kind: "dial", key, cx, cy, r, start, span, frac: f, label: label || "", hitR: r + 18 });
+  return f;
+}
+
+function impactFlash(S, x, y, color = "#ffd166", speed = 1) {
+  S._fl = S._fl || [];
+  S._fl.push({ x, y, r: 4, a: 1, c: color });
+  if (S._fl.length > 8) S._fl.shift();
+}
+
+function drawFlashes(ctx, S) {
+  const fl = S._fl || [];
+  for (let i = fl.length - 1; i >= 0; i--) {
+    const p = fl[i];
+    p.r += 7;
+    p.a *= 0.86;
+    if (p.a < 0.03) {
+      fl.splice(i, 1);
+      continue;
+    }
+    ctx.strokeStyle = p.c.replace("ALPHA", (p.a * 0.9).toFixed(3));
+    ctx.lineWidth = 2.5 * p.a;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// Continual fading trail (points co-located with a moving object each frame)
+function persistentTrail(S, key, x, y, opts = {}) {
+  if (S._trKey !== key) {
+    S._tr = [];
+    S._trKey = key;
+  }
+  const max = opts.max ?? 60;
+  S._tr.push({ x, y, a: 1 });
+  if (S._tr.length > max) S._tr.shift();
+  S._tr.forEach((p) => {
+    p.a *= opts.fade ?? 0.93;
+    if (p.a < 0.02) p.a = 0;
+  });
+  return S._tr;
+}
+
+function drawPersistentTrail(ctx, S, color, maxR = 3) {
+  (S._tr || []).forEach((p) => {
+    if (p.a <= 0) return;
+    ctx.fillStyle = color.replace("ALPHA", (p.a * 0.85).toFixed(3));
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1 + maxR * p.a, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // 02 · SERIES / PARALLEL CIRCUITS
 // ─────────────────────────────────────────────────────────────
 function circuitSP(ctx, scene, W, H, t, full, S) {
@@ -300,6 +504,8 @@ function freeFall(ctx, scene, W, H, t, full, S) {
   ctx.setLineDash([]);
   // Object
   const radius = full ? 16 : 12;
+  persistentTrail(S, "ff-ball", W * 0.3, by, { max: 40 });
+  drawPersistentTrail(ctx, S, "rgba(255,183,71,ALPHA)", 2);
   const glow = ctx.createRadialGradient(W * 0.3, by, 0, W * 0.3, by, radius * 3);
   glow.addColorStop(0, "rgba(255,200,80,0.5)");
   glow.addColorStop(1, "transparent");
@@ -333,6 +539,8 @@ function freeFall(ctx, scene, W, H, t, full, S) {
   ctx.fillStyle = "rgba(255,120,100,0.85)";
   ctx.textAlign = "right";
   ctx.fillText(`a = g = ${scene.g.toFixed(1)} m/s²`, W - W * 0.04, H * 0.1);
+  // drag the drop-height handle (vertical slider on the release column)
+  labSlider(ctx, S, W * 0.15 - 8, startY, groundY - startY, "h0", fracOf(ctx.canvas, "h0", scene.h0 ?? 0), "h₀", { orient: "v", color: "#ffb347" });
   equationFooter(ctx, W, H, "v = u + gt      s = ut + ½gt²      v² = u² + 2gs", full);
 }
 
@@ -369,6 +577,10 @@ function friction(ctx, scene, W, H, t, full, S) {
   ctx.strokeStyle = "rgba(255,255,255,0.4)";
   ctx.lineWidth = 2;
   ctx.stroke();
+  if (scene.moving) {
+    persistentTrail(S, "fr-block", x + size / 2, y + size, { max: 26 });
+    drawPersistentTrail(ctx, S, "rgba(180,200,255,ALPHA)", 1.6);
+  }
   st(ctx, full ? 14 : 10);
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
@@ -402,6 +614,8 @@ function friction(ctx, scene, W, H, t, full, S) {
     W / 2,
     H * 0.16
   );
+  // drag-to-pull handle for the applied force
+  labSlider(ctx, S, W * 0.06, groundY + (full ? 44 : 36), W * 0.4, "force", fracOf(ctx.canvas, "force", scene.applied ?? 0), `pull F = ${(scene.applied ?? 0).toFixed(0)} N`, { color: "#ff9a76" });
   equationFooter(ctx, W, H, "F = μN    N = mg", full);
 }
 
@@ -621,6 +835,8 @@ function energyTrack(ctx, scene, W, H, t, full, S) {
   ctx.beginPath();
   ctx.arc(bx, by, full ? 14 : 11, 0, Math.PI * 2);
   ctx.fill();
+  persistentTrail(S, "et-skater", bx, by, { max: 46 });
+  drawPersistentTrail(ctx, S, "rgba(0,255,213,ALPHA)", 2);
   st(ctx, full ? 12 : 9);
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillText(`h = ${scene.hm.toFixed(2)} m`, bx, by - (full ? 22 : 18));
@@ -699,12 +915,20 @@ function collision(ctx, scene, W, H, t, full, S) {
   if (scene.impact) {
     const mx = (pos1 + size1 + pos2) / 2;
     const my = groundY - size1 / 2;
-    ctx.strokeStyle = `rgba(255,240,106,${0.6 * (1 - scene.impact)})`;
+    if (scene.impact > 0.05 && scene.impact < 0.95) {
+      impactFlash(S, mx, my, "rgba(255,240,106,ALPHA)");
+    }
+    ctx.strokeStyle = `rgba(255,240,106,${(0.6 * (1 - scene.impact)).toFixed(3)})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(mx, my, 20 + scene.impact * 25, 0, Math.PI * 2);
     ctx.stroke();
   }
+  drawFlashes(ctx, S);
+  // drag-to-operate initial velocity sliders below the track
+  const sliderY = groundY + (full ? 34 : 28);
+  labSlider(ctx, S, trackStart - (full ? 20 : 12), sliderY, full ? 170 : 120, "v1", fracOf(ctx.canvas, "v1", scene.u1 != null ? scene.u1 : 0), `v1 = ${(scene.u1 ?? 0).toFixed(1)} m/s`, { color: "#57d3ff" });
+  labSlider(ctx, S, W * 0.5, sliderY, full ? 170 : 120, "v2", fracOf(ctx.canvas, "v2", scene.u2 != null ? scene.u2 : 0), `v2 = ${(scene.u2 ?? 0).toFixed(1)} m/s`, { color: "#ff5aa9" });
   st(ctx, full ? 13 : 10);
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.textAlign = "center";
@@ -745,6 +969,8 @@ function centripetal(ctx, scene, W, H, t, full, S) {
   const theta = scene.theta ?? 0;
   const px = cx + Math.cos(theta) * r;
   const py = cy + Math.sin(theta) * r;
+  persistentTrail(S, "cp-ball", px, py, { max: full ? 90 : 70 });
+  drawPersistentTrail(ctx, S, "rgba(255,157,46,ALPHA)", 2.2);
   // center glow
   ctx.fillStyle = "rgba(255,240,106,0.4)";
   ctx.beginPath();
@@ -781,6 +1007,8 @@ function centripetal(ctx, scene, W, H, t, full, S) {
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.textAlign = "center";
   ctx.fillText(`Fc = ${scene.fc.toFixed(1)} N   ω = ${scene.omega.toFixed(2)} rad/s   T = ${scene.period.toFixed(2)} s`, W / 2, H * 0.08);
+  labSlider(ctx, S, W * 0.4, H * 0.9, W * 0.2, "vel", fracOf(ctx.canvas, "vel", scene.vel ?? 0), `v = ${(scene.vel ?? 0).toFixed(1)} m/s`, { color: "#42ff80" });
+  labSlider(ctx, S, W * 0.68, H * 0.9, W * 0.2, "radius", fracOf(ctx.canvas, "radius", scene.radius ?? 0), `r = ${(scene.radius ?? 0).toFixed(1)} m`, { color: "#ff5aa9" });
   equationFooter(ctx, W, H, "Fc = mv²/r = mrω²", full);
 }
 
@@ -863,6 +1091,8 @@ function wave(ctx, scene, W, H, t, full, S) {
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.textAlign = "center";
   ctx.fillText(`f = ${scene.freq.toFixed(2)} Hz   v = ${scene.speed.toFixed(1)} m/s   v = f·λ`, W / 2, H * 0.07);
+  labSlider(ctx, S, W * 0.06, H * 0.9, W * 0.3, "freq", fracOf(ctx.canvas, "freq", scene.freq ?? 0), `f = ${(scene.freq ?? 0).toFixed(1)} Hz`, { color: "#57d3ff" });
+  labSlider(ctx, S, W * 0.6, H * 0.9, W * 0.3, "amp", fracOf(ctx.canvas, "amp", scene.amp ?? 0), `A = ${(scene.amp ?? 0).toFixed(2)} m`, { color: "#ff4fd8" });
   equationFooter(ctx, W, H, "v = fλ", full);
 }
 
@@ -922,6 +1152,8 @@ function soundWave(ctx, scene, W, H, t, full, S) {
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.textAlign = "center";
   ctx.fillText(`f = ${scene.freq} Hz   λ = ${lambda.toFixed(2)} m   v = ${scene.speed} m/s  (${scene.medium})`, W / 2, H * 0.07);
+  labDial(ctx, S, W * 0.12, H * 0.84, full ? 30 : 23, "f", fracOf(ctx.canvas, "f", Number(scene.freq) || 0), "pitch f", { color: "#57d3ff" });
+  labSlider(ctx, S, W * 0.3, H * 0.9, W * 0.55, "amp", fracOf(ctx.canvas, "amp", scene.amp ?? 0), `A = ${(scene.amp ?? 0).toFixed(2)} m`, { color: "#ff4fd8" });
   equationFooter(ctx, W, H, "v = fλ", full);
 }
 
@@ -1351,20 +1583,23 @@ function gas(ctx, scene, W, H, t, full, S) {
   const boxR = W * 0.68;
   const boxT = H * 0.12;
   const boxB = H * 0.78;
+  // the chamber height tracks the volume control (piston moves down as V shrinks)
+  const volF = fracOf(ctx.canvas, "volume", scene.volume ?? 0.05);
+  const top = boxT + (1 - volF) * (boxB - boxT) * 0.45;
   ctx.fillStyle = scene.pressure > 3 ? "rgba(120,60,180,0.14)" : "rgba(87,211,255,0.1)";
   ctx.beginPath();
-  ctx.roundRect(boxL, boxT, boxR - boxL, boxB - boxT, 12);
+  ctx.roundRect(boxL, top, boxR - boxL, boxB - top, 12);
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.4)";
   ctx.lineWidth = 2;
   ctx.stroke();
   const st0 = getStore(ctx.canvas);
-  const key = `gas-${scene.n}-${scene.temp}`;
+  const key = `gas-${scene.n}-${scene.temp}-${scene.volume}`;
   if (st0.gasKey !== key) {
     st0.gas = [];
     st0.gasKey = key;
     for (let i = 0; i < Math.min(120, scene.n); i++) {
-      st0.gas.push({ x: boxL + Math.random() * (boxR - boxL), y: boxT + Math.random() * (boxB - boxT), a: Math.random() * 6.28, sp: (0.8 + Math.random() * 1.5) * (scene.temp / 300) });
+      st0.gas.push({ x: boxL + Math.random() * (boxR - boxL), y: top + Math.random() * (boxB - top), a: Math.random() * 6.28, sp: (0.8 + Math.random() * 1.5) * (scene.temp / 300) });
     }
   }
   const particles = st0.gas || [];
@@ -1375,7 +1610,7 @@ function gas(ctx, scene, W, H, t, full, S) {
     p.y += Math.sin(p.a) * p.sp * 1.2;
     if (p.x < boxL + 3) { p.x = boxL + 3; p.a = Math.PI - p.a; }
     if (p.x > boxR - 3) { p.x = boxR - 3; p.a = Math.PI - p.a; }
-    if (p.y < boxT + 3) { p.y = boxT + 3; p.a = -p.a; }
+    if (p.y < top + 3) { p.y = top + 3; p.a = -p.a; }
     if (p.y > boxB - 3) { p.y = boxB - 3; p.a = -p.a; }
     ctx.fillStyle = `rgba(255,${Math.min(255, 150 + scene.temp * 0.4)},${Math.max(0, 255 - scene.temp * 0.9)},0.85)`;
     ctx.beginPath();
@@ -1384,7 +1619,10 @@ function gas(ctx, scene, W, H, t, full, S) {
   });
   // piston top
   ctx.fillStyle = "rgba(120,130,160,0.95)";
-  ctx.fillRect(boxL - 6, boxT - 8, boxR - boxL + 12, 8);
+  ctx.fillRect(boxL - 6, top - 8, boxR - boxL + 12, 8);
+  // drag-to-operate: volume + temperature
+  labSlider(ctx, S, W * 0.72, H * 0.86, full ? 150 : 110, "volume", volF, `V = ${(scene.volume ?? 0).toFixed(2)} m³`, { color: "#57d3ff" });
+  labSlider(ctx, S, W * 0.72, H * 0.93, full ? 150 : 110, "temp", fracOf(ctx.canvas, "temp", scene.temp ?? 300), `T = ${(scene.temp ?? 0).toFixed(0)} K`, { color: "#ffb347" });
   // gauge
   const gx = W * 0.82;
   const gy = H * 0.4;
@@ -1659,6 +1897,8 @@ function projectileAir(ctx, scene, W, H, t, full, S) {
   if (dp) {
     const x = launchX + dp[0] * scale;
     const y = groundY - dp[1] * heightScale;
+    persistentTrail(S, "pa-proj", x, y, { max: 40 });
+    drawPersistentTrail(ctx, S, "rgba(255,90,169,ALPHA)", 2.5);
     const gl = ctx.createRadialGradient(x, y, 0, x, y, 18);
     gl.addColorStop(0, "rgba(255,90,169,0.5)");
     gl.addColorStop(1, "transparent");
@@ -1671,6 +1911,9 @@ function projectileAir(ctx, scene, W, H, t, full, S) {
     ctx.arc(x, y, full ? 7 : 5, 0, Math.PI * 2);
     ctx.fill();
   }
+  // drag-to-operate cannon controls
+  labSlider(ctx, S, W * 0.5, H * 0.9, full ? 170 : 120, "speed", fracOf(ctx.canvas, "speed", scene.speed ?? 35), `v = ${(scene.speed ?? 35).toFixed(0)} m/s`, { color: "#57d3ff" });
+  labDial(ctx, S, W * 0.09, H * 0.4, full ? 30 : 24, "angle", fracOf(ctx.canvas, "angle", scene.angle ?? 45), "angle", { color: "#ff5aa9", start: 0, span: Math.PI / 2 });
   st(ctx, full ? 13 : 10);
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.textAlign = "center";
@@ -2469,6 +2712,8 @@ function targetChallenge(ctx, scene, W, H, t, full, S) {
     if (p) {
       const x = launchX + p[0] * scale;
       const y = groundY - p[1] * heightScale;
+      persistentTrail(S, "tc-proj", x, y, { max: 34 });
+      drawPersistentTrail(ctx, S, "rgba(255,90,169,ALPHA)", 2.5);
       const gl = ctx.createRadialGradient(x, y, 0, x, y, 18);
       gl.addColorStop(0, "rgba(255,90,169,0.5)");
       gl.addColorStop(1, "transparent");
@@ -2490,6 +2735,10 @@ function targetChallenge(ctx, scene, W, H, t, full, S) {
   st(ctx, full ? 13 : 10);
   ctx.textAlign = "center";
   ctx.fillText(`Range predicted ${scene.range.toFixed(1)} m   Error ${scene.error.toFixed(1)} m   ${scene.fired ? "Fired!" : "Set angle & speed, press FIRE"}`, W / 2, H * 0.07);
+  // drag-to-operate controls: angle dial + speed slider
+  labDial(ctx, S, W * 0.12, H * 0.34, full ? 30 : 24, "angle", fracOf(ctx.canvas, "angle", scene.angle), "angle", { color: "#57d3ff" });
+  labDial(ctx, S, W * 0.22, H * 0.34, full ? 30 : 24, "speed", fracOf(ctx.canvas, "speed", scene.speed), "speed", { color: "#ff5aa9" });
+  labSlider(ctx, S, W * 0.08, H * 0.5, (full ? 130 : 100), "speed", fracOf(ctx.canvas, "speed", scene.speed), `v = ${scene.speed} m/s`, { color: "#ff5aa9" });
   if (scene.hit) {
     ctx.fillStyle = "rgba(66,255,128,0.95)";
     st(ctx, full ? 20 : 14);
@@ -2585,6 +2834,7 @@ function doppler(ctx, scene, W, H, t, full, S) {
 export function drawScene(ctx, kind, scene, W, H, tAmb, full, isRunning) {
   // `tAmb` in seconds-ish for ambient animation
   const S = getStore(ctx.canvas);
+  S.ctl = [];
   switch (kind) {
     case "circuitSP": return circuitSP(ctx, scene, W, H, tAmb, full, S);
     case "freeFall": return freeFall(ctx, scene, W, H, tAmb, full, S);
@@ -2634,4 +2884,4 @@ export function drawScene(ctx, kind, scene, W, H, tAmb, full, isRunning) {
 const trailing = null;
 const norad = null;
 const rgb = null;
-export { stars as drawStars, background as drawBackground, ground as drawGround, arrow as drawArrow, equationFooter, hsl as drawColor };
+export { stars as drawStars, background as drawBackground, ground as drawGround, arrow as drawArrow, equationFooter, hsl as drawColor, getStore };

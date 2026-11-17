@@ -168,9 +168,13 @@ export function stepLaunchStack(stack, dt) {
  * Separate the two stages.
  *
  * Both vehicles inherit the same position and velocity
- * at the instant of separation.
+ * at the instant of separation, plus a configurable
+ * separation impulse.
+ * 
+ * @param {Object} stack - Launch stack state
+ * @param {number} separationVelocity - Additional separation velocity in m/s (default: 5 m/s)
  */
-export function separateStages(stack) {
+export function separateStages(stack, separationVelocity = 5.0) {
   if (stack.separated) {
     throw new Error("Stages are already separated.");
   }
@@ -200,6 +204,18 @@ export function separateStages(stack) {
   stack.starship.totalMassKg =
     STARSHIP_CONFIG.dryMassKg +
     stack.starshipPropellantMassKg;
+  
+  // Apply separation impulse: booster slows down, Starship speeds up
+  // Conservation of momentum: total momentum before = total momentum after
+  const totalMass = stack.booster.totalMassKg + stack.starship.totalMassKg;
+  const boosterMassFraction = stack.booster.totalMassKg / totalMass;
+  const starshipMassFraction = stack.starship.totalMassKg / totalMass;
+  
+  // Booster gets pushed backward (relative to direction of flight)
+  stack.booster.velocity.y -= separationVelocity * starshipMassFraction;
+  
+  // Starship gets pushed forward
+  stack.starship.velocity.y += separationVelocity * boosterMassFraction;
 
   stack.booster.status = "STAGE SEPARATED";
   stack.starship.status = "STAGE SEPARATED";
@@ -209,7 +225,7 @@ export function separateStages(stack) {
 
   stack.events.push({
     time: stack.missionTime,
-    message: "Hot staging: Starship separated from Super Heavy.",
+    message: `Hot staging: Starship separated from Super Heavy (+${separationVelocity.toFixed(1)} m/s).`,
   });
 
   return {

@@ -3625,3 +3625,57 @@ summary:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Mission control enhancements */
+.mission-command-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mission-command-row .mission-command {
+  flex: 1;
+  min-width: 120px;
+}
+
+.telemetry-warnings {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 165, 0, 0.15);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 6px;
+}
+
+.telemetry-warning {
+  font-size: 0.72rem;
+  color: var(--warning);
+  margin: 0.2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vehicle-telemetry {
+  margin-bottom: 0.75rem;
+}
+
+.vehicle-telemetry-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.vehicle-telemetry-heading strong {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vehicle-telemetry-heading span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}

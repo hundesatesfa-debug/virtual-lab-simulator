@@ -15,13 +15,21 @@
  */
 
 export const PHYSICS = {
-  EARTH_RADIUS: 6371000,
-  MU: 3.986004418e14,
-  G0: 9.80665,
-  MAX_INTEGRATION_STEP: 0.02,
-  ATMOSPHERE_LIMIT: 180000,
-  SEA_LEVEL_DENSITY: 1.225,
-  HEATING_COEFFICIENT: 1.83e-4,
+  EARTH_RADIUS: 6371000, // m
+  MU: 3.986004418e14, // m³/s² (gravitational parameter)
+  G0: 9.80665, // m/s² (standard gravity)
+  MAX_INTEGRATION_STEP: 0.02, // s (20 milliseconds)
+  ATMOSPHERE_LIMIT: 180000, // m (180 km)
+  SEA_LEVEL_DENSITY: 1.225, // kg/m³
+  HEATING_COEFFICIENT: 1.83e-4, // Sutton-Graves constant
+  
+  // Earth rotation
+  EARTH_ROTATION_RATE: 7.2921159e-5, // rad/s (sidereal rotation)
+  STARBASE_LATITUDE: 25.99677, // degrees North
+  
+  // Structural limits (educational estimates)
+  MAX_DYNAMIC_PRESSURE_WARNING: 50000, // Pa (50 kPa - typical Max Q range)
+  MAX_ACCELERATION_WARNING: 4.0, // g (typical max acceleration limit)
 };
 
 // Standard-atmosphere reference density values.
@@ -54,6 +62,50 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const radians = (degrees) => degrees * Math.PI / 180;
 const degrees = (radiansValue) => radiansValue * 180 / Math.PI;
 const magnitude = (x, y) => Math.hypot(x, y);
+
+/**
+ * Calculate Earth's surface rotation velocity at a given latitude.
+ * 
+ * @param {number} latitudeDegrees - Latitude in degrees
+ * @returns {number} Eastward velocity in m/s
+ */
+export function calculateEarthRotationVelocity(latitudeDegrees = PHYSICS.STARBASE_LATITUDE) {
+  const latitudeRad = radians(latitudeDegrees);
+  // v = ω × r × cos(latitude)
+  return PHYSICS.EARTH_ROTATION_RATE * PHYSICS.EARTH_RADIUS * Math.cos(latitudeRad);
+}
+
+/**
+ * Check if vehicle has exceeded structural limits.
+ * Returns warnings for dangerous flight conditions.
+ * 
+ * @param {Object} vehicle - Vehicle state
+ * @returns {Object} Warning flags and messages
+ */
+export function checkStructuralLimits(vehicle) {
+  const warnings = {
+    maxQ: false,
+    maxAcceleration: false,
+    messages: [],
+  };
+
+  if (vehicle.dynamicPressure > PHYSICS.MAX_DYNAMIC_PRESSURE_WARNING) {
+    warnings.maxQ = true;
+    warnings.messages.push(
+      `Dynamic pressure ${(vehicle.dynamicPressure / 1000).toFixed(1)} kPa exceeds nominal Max Q`
+    );
+  }
+
+  const accelerationG = magnitude(vehicle.acceleration.x, vehicle.acceleration.y) / PHYSICS.G0;
+  if (accelerationG > PHYSICS.MAX_ACCELERATION_WARNING) {
+    warnings.maxAcceleration = true;
+    warnings.messages.push(
+      `Acceleration ${accelerationG.toFixed(1)}g exceeds structural limit`
+    );
+  }
+
+  return warnings;
+}
 
 export function calculateGravity(altitudeMeters) {
   const radius = PHYSICS.EARTH_RADIUS + Math.max(0, altitudeMeters);
@@ -109,8 +161,18 @@ export function calculateAerodynamicDrag({
   dragCoefficient,
   referenceArea,
   noseRadius = 1,
+  includeEarthRotation = true,
+  latitudeDegrees = PHYSICS.STARBASE_LATITUDE,
 }) {
-  const speed = magnitude(velocityX, velocityY);
+  // Account for Earth's rotation in atmospheric reference frame
+  let relativeVelocityX = velocityX;
+  
+  if (includeEarthRotation) {
+    const atmosphereVelocity = calculateEarthRotationVelocity(latitudeDegrees);
+    relativeVelocityX = velocityX - atmosphereVelocity;
+  }
+
+  const speed = magnitude(relativeVelocityX, velocityY);
   const atmosphere = calculateAtmosphere(altitude);
 
   if (speed < 0.001 || atmosphere.density <= 0) {
@@ -137,7 +199,7 @@ export function calculateAerodynamicDrag({
     speed ** 3;
 
   return {
-    forceX: -dragForce * velocityX / speed,
+    forceX: -dragForce * relativeVelocityX / speed,
     forceY: -dragForce * velocityY / speed,
     dynamicPressure,
     heatingRate,
@@ -208,6 +270,8 @@ export function createVehicle({
   noseRadius = 1,
   altitude = 0,
   downrange = 0,
+  includeEarthRotation = true,
+  latitudeDegrees = PHYSICS.STARBASE_LATITUDE,
 }) {
   if (!(dryMassKg > 0)) {
     throw new Error("Vehicle dry mass must be positive.");
@@ -226,6 +290,11 @@ export function createVehicle({
     throw new Error("Invalid engine configuration.");
   }
 
+  // Initial horizontal velocity from Earth rotation
+  const initialVelocityX = includeEarthRotation 
+    ? calculateEarthRotationVelocity(latitudeDegrees)
+    : 0;
+
   return {
     name,
 
@@ -239,13 +308,16 @@ export function createVehicle({
     dragCoefficient,
     referenceArea,
     noseRadius,
+    
+    includeEarthRotation,
+    latitudeDegrees,
 
     position: {
       x: downrange,
       y: altitude,
     },
 
-    velocity: { x: 0, y: 0 },
+    velocity: { x: initialVelocityX, y: 0 },
     acceleration: { x: 0, y: 0 },
 
     throttle: 0,
@@ -269,6 +341,12 @@ export function createVehicle({
     landed: false,
     engineCutoff: false,
     fuelDepleted: false,
+    
+    warnings: {
+      maxQ: false,
+      maxAcceleration: false,
+      messages: [],
+    },
   };
 }
 
@@ -309,6 +387,8 @@ function integrateStep(vehicle, dt) {
     dragCoefficient: vehicle.dragCoefficient,
     referenceArea: vehicle.referenceArea,
     noseRadius: vehicle.noseRadius,
+    includeEarthRotation: vehicle.includeEarthRotation,
+    latitudeDegrees: vehicle.latitudeDegrees,
   });
 
   let thrust = 0;
@@ -405,6 +485,9 @@ function integrateStep(vehicle, dt) {
   );
 
   vehicle.elapsedTime += dt;
+  
+  // Check structural limits
+  vehicle.warnings = checkStructuralLimits(vehicle);
 
   if (vehicle.propellantMassKg <= 0 && massFlowRate > 0) {
     vehicle.propellantMassKg = 0;
@@ -464,6 +547,13 @@ export function getTelemetry(vehicle) {
       : 0;
 
   const orbital = calculateOrbitalElements(vehicle);
+  
+  // Calculate velocity relative to ground (subtract Earth rotation if applicable)
+  const groundRelativeVelocityX = vehicle.includeEarthRotation
+    ? vehicle.velocity.x - calculateEarthRotationVelocity(vehicle.latitudeDegrees)
+    : vehicle.velocity.x;
+  
+  const groundRelativeSpeed = magnitude(groundRelativeVelocityX, vehicle.velocity.y);
 
   return {
     name: vehicle.name,
@@ -474,6 +564,9 @@ export function getTelemetry(vehicle) {
     horizontalVelocity: vehicle.velocity.x,
     verticalVelocity: vehicle.velocity.y,
     speed,
+    
+    groundRelativeSpeed,
+    inertialSpeed: speed,
 
     acceleration,
     accelerationG: acceleration / PHYSICS.G0,
@@ -503,9 +596,25 @@ export function getTelemetry(vehicle) {
     engineCutoff: vehicle.engineCutoff,
     fuelDepleted: vehicle.fuelDepleted,
     landed: vehicle.landed,
+    
+    warnings: vehicle.warnings,
 
     orbital,
 
     status: vehicle.status,
+  };
+}
+
+/**
+ * Create a deep copy of vehicle state for validation or testing.
+ */
+export function cloneVehicle(vehicle) {
+  return {
+    ...vehicle,
+    position: { ...vehicle.position },
+    velocity: { ...vehicle.velocity },
+    acceleration: { ...vehicle.acceleration },
+    engines: { ...vehicle.engines },
+    warnings: { ...vehicle.warnings, messages: [...vehicle.warnings.messages] },
   };
 }

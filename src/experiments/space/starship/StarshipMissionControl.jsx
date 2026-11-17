@@ -20,9 +20,15 @@ import {
   startStarshipRecoveryBurn,
   recordMissionEvent,
 } from "./stageMissions.js";
+import {
+  calculateAutopilotGuidance,
+  calculateStagingGuidance,
+  calculateLandingGuidance,
+} from "./guidanceComputer.js";
 import StarbaseScene from "../starbase/StarbaseScene.jsx";
 
 const SIMULATION_STEP = 0.05;
+const TIME_SCALES = [0.1, 0.25, 0.5, 1, 2, 5, 10];
 
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
@@ -40,12 +46,21 @@ function TelemetryValue({ label, value, unit }) {
 }
 
 function VehicleTelemetry({ title, data }) {
+  const hasWarnings = data.warnings && (data.warnings.maxQ || data.warnings.maxAcceleration);
+  
   return (
     <section className="vehicle-telemetry">
       <div className="vehicle-telemetry-heading">
         <strong>{title}</strong>
         <span>{data.status}</span>
       </div>
+      {hasWarnings && (
+        <div className="telemetry-warnings">
+          {data.warnings.messages.map((msg, i) => (
+            <div key={i} className="telemetry-warning">⚠ {msg}</div>
+          ))}
+        </div>
+      )}
       <div className="mission-telemetry-grid">
         <TelemetryValue label="Altitude" value={(data.altitudeMeters / 1000).toFixed(1)} unit="km" />
         <TelemetryValue label="Velocity" value={(data.speed / 1000).toFixed(2)} unit="km/s" />
@@ -72,6 +87,10 @@ export default function StarshipMissionControl() {
   const [telemetryOpen, setTelemetryOpen] = useState(true);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [error, setError] = useState("");
+  const [paused, setPaused] = useState(false);
+  const [timeScale, setTimeScale] = useState(1);
+  const [autopilotEnabled, setAutopilotEnabled] = useState(false);
+  const [guidanceMessage, setGuidanceMessage] = useState("");
 
   const publishTelemetry = useCallback(() => {
     const next = getStackTelemetry(stackRef.current);
@@ -106,12 +125,36 @@ export default function StarshipMissionControl() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       const stack = stackRef.current;
-      if (stack.phase === "PAD") return;
+      if (stack.phase === "PAD" || paused) return;
+
+      const effectiveStep = SIMULATION_STEP * timeScale;
+
+      // Apply autopilot guidance if enabled
+      if (autopilotEnabled && !stack.separated) {
+        const guidance = calculateAutopilotGuidance(stack.ascentVehicle);
+        if (guidance) {
+          setStackPitch(stack, guidance.pitch);
+          setStackThrottle(stack, guidance.throttle);
+          
+          // Generate guidance message
+          let message = "";
+          if (guidance.gravityTurnActive) {
+            message = "Gravity turn in progress";
+          }
+          if (guidance.maxQThrottleActive) {
+            message = message ? message + " · Max Q - throttling down" : "Max Q - throttling down";
+          }
+          if (!message) {
+            message = "Autopilot maintaining trajectory";
+          }
+          setGuidanceMessage(message);
+        }
+      }
 
       if (stack.separated) {
-        stepSeparatedVehicles(stack, SIMULATION_STEP);
+        stepSeparatedVehicles(stack, effectiveStep);
       } else {
-        stepLaunchStack(stack, SIMULATION_STEP);
+        stepLaunchStack(stack, effectiveStep);
       }
 
       if (stack.separated && stack.booster.landed && !eventFlagsRef.current.boosterLanded) {
@@ -127,7 +170,7 @@ export default function StarshipMissionControl() {
     }, 50);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [paused, timeScale, autopilotEnabled]);
 
   const applyVehiclePreparation = () => {
     const stack = createLaunchStack({
@@ -180,6 +223,33 @@ export default function StarshipMissionControl() {
     setPrepared(true);
     setCountdown(null);
     setError("");
+    setPaused(false);
+    setTimeScale(1);
+    setAutopilotEnabled(false);
+    setGuidanceMessage("");
+    publishTelemetry();
+  };
+
+  const togglePause = () => {
+    if (telemetry.phase === "PAD") return;
+    setPaused(p => !p);
+  };
+  
+  const cycleTimeScale = () => {
+    const currentIndex = TIME_SCALES.indexOf(timeScale);
+    const nextIndex = (currentIndex + 1) % TIME_SCALES.length;
+    setTimeScale(TIME_SCALES[nextIndex]);
+  };
+
+  const toggleAutopilot = () => {
+    if (telemetry.separated) return; // Only available during ascent
+    setAutopilotEnabled(a => !a);
+    if (!autopilotEnabled) {
+      recordMissionEvent(stackRef.current, "Autopilot engaged - gravity turn guidance active.");
+    } else {
+      recordMissionEvent(stackRef.current, "Autopilot disengaged - manual control restored.");
+      setGuidanceMessage("");
+    }
     publishTelemetry();
   };
 
@@ -288,6 +358,13 @@ export default function StarshipMissionControl() {
               <>
                 <section className="mission-control-group">
                   <h3>Ascent flight controls</h3>
+                  {guidanceMessage && (
+                    <div className="telemetry-warnings">
+                      <div className="telemetry-warning" style={{background: 'rgba(0, 150, 255, 0.15)', borderColor: 'rgba(0, 150, 255, 0.5)'}}>
+                        🎯 {guidanceMessage}
+                      </div>
+                    </div>
+                  )}
                   <div className="mission-slider">
                     <label htmlFor="stack-throttle">Throttle</label>
                     <strong>{Math.round(booster.throttle * 100)}%</strong>
@@ -298,6 +375,7 @@ export default function StarshipMissionControl() {
                       max="100"
                       value={Math.round(booster.throttle * 100)}
                       onChange={(event) => updateAscentControl("throttle", Number(event.target.value))}
+                      disabled={autopilotEnabled}
                     />
                   </div>
                   <div className="mission-slider">
@@ -310,16 +388,26 @@ export default function StarshipMissionControl() {
                       max="90"
                       value={Math.round(booster.pitchDeg)}
                       onChange={(event) => updateAscentControl("pitch", Number(event.target.value))}
+                      disabled={autopilotEnabled}
                     />
                   </div>
-                  <button
-                    className="mission-command secondary"
-                    type="button"
-                    disabled={booster.altitudeMeters < 1000}
-                    onClick={() => perform(separateStages)}
-                  >
-                    Separate stages
-                  </button>
+                  <div className="mission-command-row">
+                    <button
+                      className={`mission-command ${autopilotEnabled ? 'primary' : 'secondary'}`}
+                      type="button"
+                      onClick={toggleAutopilot}
+                    >
+                      {autopilotEnabled ? '🎯 Autopilot ON' : 'Engage autopilot'}
+                    </button>
+                    <button
+                      className="mission-command secondary"
+                      type="button"
+                      disabled={booster.altitudeMeters < 1000}
+                      onClick={() => perform(separateStages)}
+                    >
+                      Separate stages
+                    </button>
+                  </div>
                 </section>
               </>
             )}
@@ -406,9 +494,30 @@ export default function StarshipMissionControl() {
 
             {error && <p className="mission-error" role="alert">{error}</p>}
             {!isReady && (
-              <button className="mission-command secondary" type="button" onClick={resetMission}>
-                Reset mission
-              </button>
+              <>
+                <section className="mission-control-group">
+                  <h3>Simulation control</h3>
+                  <div className="mission-command-row">
+                    <button
+                      className="mission-command secondary"
+                      type="button"
+                      onClick={togglePause}
+                    >
+                      {paused ? "▶ Resume" : "⏸ Pause"}
+                    </button>
+                    <button
+                      className="mission-command secondary"
+                      type="button"
+                      onClick={cycleTimeScale}
+                    >
+                      Speed: {timeScale}x
+                    </button>
+                  </div>
+                </section>
+                <button className="mission-command secondary" type="button" onClick={resetMission}>
+                  Reset mission
+                </button>
+              </>
             )}
           </div>
         )}

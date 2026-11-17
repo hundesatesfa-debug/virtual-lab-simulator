@@ -11,6 +11,7 @@
   "dependencies": {
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.17.11",
+    "cesium": "^1.147.0",
     "framer-motion": "^11.18.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -20,6 +21,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.14"
+    "vite": "^5.4.14",
+    "vite-plugin-static-copy": "^2.2.0"
   }
 }

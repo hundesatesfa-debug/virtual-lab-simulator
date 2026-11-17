@@ -4,35 +4,125 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { ProgressProvider, useProgress } from "./context/ProgressContext";
 import { experiments } from "./data/experiments";
 import Dashboard from "./components/Dashboard";
-import LabScene from "./components/LabScene";
 import TutorPanel from "./components/TutorPanel";
 import AssessmentPanel from "./components/AssessmentPanel";
 import VoiceControls from "./components/VoiceControls";
 import { getAdaptiveHint } from "./utils/tutor";
 
-function Header({ selected, setSelected, assessmentMode, setAssessmentMode }) {
+function Header({
+  selected,
+  menuOpen,
+  setMenuOpen,
+  assessmentMode,
+  setAssessmentMode,
+  slowMotion,
+  setSlowMotion,
+  onReplay,
+  insightsOpen,
+  setInsightsOpen
+}) {
   const { theme, toggleTheme } = useTheme();
   const { progress } = useProgress();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const current = experiments.find((item) => item.id === selected) ?? experiments[0];
 
   return (
     <header className="topbar glass">
-      <div>
-        <h1>Virtual Physics Lab</h1>
-        <p>Interactive experiments for Grade 9-12</p>
+      <button
+        className="menu-trigger"
+        type="button"
+        aria-label="Browse experiments"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span className="menu-glyph" aria-hidden="true"><i /><i /><i /></span>
+        <span className="menu-trigger-label">Experiments</span>
+      </button>
+
+      <div className="brand-lockup" aria-label="Virtual Physics Lab">
+        <span className="brand-mark" aria-hidden="true">V</span>
+        <span className="brand-name">Virtual Physics Lab</span>
       </div>
-      <div className="topbar-actions">
-        <button className="btn" onClick={() => setAssessmentMode(!assessmentMode)}>
-          {assessmentMode ? "✕ Exit Challenge" : "⚡ Challenge Mode"}
-        </button>
-        <button className="btn btn-neon" onClick={toggleTheme}>
-          {theme === "dark" ? "☀" : "🌙"} {theme === "dark" ? "Light" : "Dark"}
-        </button>
+
+      <div className="topbar-divider" />
+
+      <div className="current-context">
+        <span className="context-label">CURRENT SIMULATION</span>
+        <strong title={current.title}>{current.title}</strong>
       </div>
-      <div className="meta">
-        <span>Level: {progress.level}</span>
-        <span>Badges: {progress.badges.length}</span>
-        <span>Running: {current.title}</span>
+
+      <div className="topbar-right">
+        <div className="system-status"><span /> Simulation ready</div>
+        <span className="level-chip" title={`${progress.badges.length} badges`}>
+          <span>LVL</span> {progress.level}
+        </span>
+        <button
+          className={`icon-button ${insightsOpen ? "is-active" : ""}`}
+          type="button"
+          aria-label="Toggle learning insights"
+          aria-expanded={insightsOpen}
+          title="Learning insights"
+          onClick={() => setInsightsOpen((open) => !open)}
+        >
+          <span aria-hidden="true">▤</span>
+        </button>
+        <div className="settings-wrap">
+          <button
+            className={`icon-button ${settingsOpen ? "is-active" : ""}`}
+            type="button"
+            aria-label="Settings"
+            aria-expanded={settingsOpen}
+            title="Settings"
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <AnimatePresence>
+            {settingsOpen && (
+              <motion.div
+                className="settings-menu"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+              >
+                <span className="popover-heading">SIMULATION SETTINGS</span>
+                <button type="button" className="settings-item" onClick={toggleTheme}>
+                  <span>{theme === "dark" ? "Light appearance" : "Dark appearance"}</span>
+                  <span className="settings-value">{theme === "dark" ? "☼" : "◐"}</span>
+                </button>
+                <button
+                  type="button"
+                  className="settings-item"
+                  onClick={() => setAssessmentMode((active) => !active)}
+                >
+                  <span>Challenge mode</span>
+                  <span className={`setting-switch ${assessmentMode ? "on" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  className="settings-item"
+                  onClick={() => setSlowMotion((active) => !active)}
+                >
+                  <span>Slow motion</span>
+                  <span className={`setting-switch ${slowMotion ? "on" : ""}`} />
+                </button>
+                <div className="settings-separator" />
+                <button
+                  type="button"
+                  className="settings-item"
+                  onClick={() => {
+                    onReplay();
+                    setSettingsOpen(false);
+                  }}
+                >
+                  <span>Restart simulation</span>
+                  <span className="settings-value" aria-hidden="true">↻</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </header>
   );
@@ -47,7 +137,8 @@ function LabApp() {
   const [mistakeCount, setMistakeCount] = useState(0);
   const [lastFeedback, setLastFeedback] = useState("");
   const [slowMotion, setSlowMotion] = useState(false);
-  const [activeTab, setActiveTab] = useState("lab"); // lab, experiments, insights
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   const selectedExperiment = experiments.find((exp) => exp.id === selected) ?? experiments[0];
   const hint = useMemo(
@@ -57,47 +148,72 @@ function LabApp() {
 
   const onSwitchExperiment = (id) => {
     setSelected(id);
-    setRunKey((k) => k + 1);
+    setRunKey((key) => key + 1);
     setAttempts(0);
     setMistakeCount(0);
     setStartTime(Date.now());
     setLastFeedback("");
-    setActiveTab("lab"); // Switch back to lab on experiment select
+    setMenuOpen(false);
+    setInsightsOpen(false);
+  };
+
+  const replay = () => {
+    setRunKey((key) => key + 1);
+    setAttempts(0);
+    setMistakeCount(0);
+    setStartTime(Date.now());
+    setLastFeedback("");
   };
 
   return (
     <div className={`app-shell ${slowMotion ? "slow-motion" : ""}`}>
       <Header
         selected={selected}
-        setSelected={setSelected}
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
         assessmentMode={assessmentMode}
         setAssessmentMode={setAssessmentMode}
+        slowMotion={slowMotion}
+        setSlowMotion={setSlowMotion}
+        onReplay={replay}
+        insightsOpen={insightsOpen}
+        setInsightsOpen={setInsightsOpen}
       />
-      <div className="utility-row">
-        <button className="btn" onClick={() => setRunKey((k) => k + 1)}>
-          ↻ Replay
-        </button>
-        <button className="btn" onClick={() => setSlowMotion((v) => !v)}>
-          {slowMotion ? "▶ Normal" : "◐ Slow-Mo"}
-        </button>
-      </div>
-      <main className={`layout tab-${activeTab}`}>
-        <div className={`dashboard-wrapper ${activeTab === 'experiments' ? 'active' : ''}`}>
-          <Dashboard
-            selected={selected}
-            onSelect={onSwitchExperiment}
-            assessmentMode={assessmentMode}
-          />
-        </div>
-        
-        <section className={`workbench ${selectedExperiment.id === "spaceMission" ? "workbench--space" : ""} ${activeTab === 'lab' ? 'active' : ''}`}>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <div className="drawer-layer">
+            <motion.button
+              className="drawer-backdrop"
+              type="button"
+              aria-label="Close experiment menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+            />
+            <Dashboard
+              selected={selected}
+              onSelect={onSwitchExperiment}
+              assessmentMode={assessmentMode}
+              onClose={() => setMenuOpen(false)}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
+      <main className={`layout ${insightsOpen ? "layout--insights" : ""}`}>
+        <section
+          className={`workbench ${selectedExperiment.id === "spaceMission" ? "workbench--space" : ""}`}
+          aria-label={`${selectedExperiment.title} workspace`}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedExperiment.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="glass experiment-card"
             >
               <selectedExperiment.component
@@ -116,49 +232,49 @@ function LabApp() {
           <VoiceControls text={`${selectedExperiment.title}. ${hint}`} />
         </section>
 
-        <aside className={`sidebar ${activeTab === 'insights' ? 'active' : ''}`}>
-          <TutorPanel
-            hint={hint}
-            feedback={lastFeedback}
-            assessmentMode={assessmentMode}
-            onELI5={() =>
-              setLastFeedback(
-                "ELI5: Think of this experiment like a game where changing one knob changes another result."
-              )
-            }
-          />
-          <AssessmentPanel
-            experiment={selectedExperiment}
-            attempts={attempts}
-            elapsedSeconds={Math.round((Date.now() - startTime) / 1000)}
-            assessmentMode={assessmentMode}
-          />
-        </aside>
+        <AnimatePresence>
+          {insightsOpen && (
+            <motion.aside
+              className="sidebar insights-panel"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 12 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div className="insights-heading">
+                <div>
+                  <span className="context-label">LEARNING TOOLS</span>
+                  <h2>Insights</h2>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Close learning insights"
+                  onClick={() => setInsightsOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <TutorPanel
+                hint={hint}
+                feedback={lastFeedback}
+                assessmentMode={assessmentMode}
+                onELI5={() =>
+                  setLastFeedback(
+                    "ELI5: Think of this experiment like a game where changing one knob changes another result."
+                  )
+                }
+              />
+              <AssessmentPanel
+                experiment={selectedExperiment}
+                attempts={attempts}
+                elapsedSeconds={Math.round((Date.now() - startTime) / 1000)}
+                assessmentMode={assessmentMode}
+              />
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </main>
-
-      <nav className="mobile-nav glass">
-        <button 
-          className={`nav-item ${activeTab === 'experiments' ? 'active' : ''}`} 
-          onClick={() => setActiveTab('experiments')}
-        >
-          <span className="icon">🧪</span>
-          <span className="label">Labs</span>
-        </button>
-        <button 
-          className={`nav-item ${activeTab === 'lab' ? 'active' : ''}`} 
-          onClick={() => setActiveTab('lab')}
-        >
-          <span className="icon">🔭</span>
-          <span className="label">Workbench</span>
-        </button>
-        <button 
-          className={`nav-item ${activeTab === 'insights' ? 'active' : ''}`} 
-          onClick={() => setActiveTab('insights')}
-        >
-          <span className="icon">📊</span>
-          <span className="label">Stats</span>
-        </button>
-      </nav>
     </div>
   );
 }
